@@ -62,6 +62,20 @@
             opacity: 1;
             bottom: 30px;
         }
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.15);
+                opacity: .8;
+            }
+        }
+        .save-pending i {
+            animation: pulse 1.5s infinite;
+            color: #F59E0B; /* Ámbar color for attention */
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -292,6 +306,19 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal de Cambios sin Guardar -->
+    <div id="unsaved-changes-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 z-50">
+            <h2 class="text-2xl font-bold mb-4">Cambios sin Guardar</h2>
+            <p class="text-gray-600 mb-6">Desea guardar los cambios en la última asistencia que tomo?</p>
+            <div class="flex justify-end gap-3">
+                <button id="discard-and-exit-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg">No</button>
+                <button id="save-and-exit-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg">Sí</button>
+                <button id="cancel-exit-btn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
 
     <script>
@@ -315,6 +342,8 @@
             currentStudentId: null,
             currentDate: new Date().toISOString().slice(0, 10),
             statusMap: { present: 'Asistió', late: 'Tardanza', absent: 'Faltó', justified: 'F. Justificada' },
+            hasUnsavedChanges: false,
+            tempAttendanceForDate: {},
             
             // Inicialización de la app
             init() {
@@ -337,7 +366,15 @@
                 }
             },
             saveData() {
+                // Copia los cambios temporales a la data principal antes de guardar
+                if (!this.data.attendance[this.currentGroupId]) {
+                    this.data.attendance[this.currentGroupId] = {};
+                }
+                this.data.attendance[this.currentGroupId][this.currentDate] = JSON.parse(JSON.stringify(this.tempAttendanceForDate));
                 localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+                this.hasUnsavedChanges = false;
+                document.getElementById('save-attendance-btn').classList.remove('save-pending');
+                this.showToast('Asistencia guardada');
             },
 
             // Navegación entre vistas
@@ -345,6 +382,14 @@
                 document.getElementById('groups-view').classList.add('hidden-view');
                 document.getElementById('students-view').classList.add('hidden-view');
                 document.getElementById(viewId).classList.remove('hidden-view');
+            },
+            
+            // Carga la asistencia temporal al cambiar de vista o fecha
+            loadTemporaryAttendance() {
+                this.hasUnsavedChanges = false;
+                document.getElementById('save-attendance-btn').classList.remove('save-pending');
+                this.tempAttendanceForDate = JSON.parse(JSON.stringify(this.data.attendance[this.currentGroupId]?.[this.currentDate] || {}));
+                this.renderStudents();
             },
 
             // Lógica de renderizado
@@ -388,7 +433,8 @@
                 const studentList = document.getElementById('student-list');
                 studentList.innerHTML = '';
                 
-                const attendanceForDate = this.data.attendance[this.currentGroupId]?.[this.currentDate] || {};
+                // USA LA DATA TEMPORAL PARA RENDERIZAR
+                const attendanceForDate = this.tempAttendanceForDate || {};
 
                 group.students.forEach(student => {
                     const record = attendanceForDate[student.id] || {};
@@ -422,7 +468,7 @@
             
             updateAttendanceSummary(){
                 if (!this.currentGroupId) return;
-                const attendanceForDate = this.data.attendance[this.currentGroupId]?.[this.currentDate] || {};
+                const attendanceForDate = this.tempAttendanceForDate || {}; // USA LA DATA TEMPORAL
                 const summary = { present: 0, late: 0, absent: 0, justified: 0 };
                 const group = this.data.groups.find(g => g.id === this.currentGroupId);
 
@@ -460,7 +506,7 @@
                     if (viewBtn) {
                         this.currentGroupId = viewBtn.dataset.groupId;
                         document.getElementById('attendance-date').value = this.currentDate;
-                        this.renderStudents();
+                        this.loadTemporaryAttendance();
                         this.showView('students-view');
                     }
                     if(editBtn){ this.openGroupModal(editBtn.dataset.groupId); }
@@ -468,19 +514,20 @@
                 });
                 
                 document.getElementById('back-to-groups-btn').addEventListener('click', () => {
-                    this.currentGroupId = null;
-                    this.renderGroups();
-                    this.showView('groups-view');
+                    if (this.hasUnsavedChanges) {
+                        this.openModal('unsaved-changes-modal');
+                    } else {
+                        this.currentGroupId = null;
+                        this.renderGroups();
+                        this.showView('groups-view');
+                    }
                 });
                 
-                document.getElementById('save-attendance-btn').addEventListener('click', () => {
-                    this.saveData();
-                    this.showToast('Asistencia guardada');
-                });
+                document.getElementById('save-attendance-btn').addEventListener('click', () => this.saveData());
 
                 document.getElementById('attendance-date').addEventListener('change', e => {
                     this.currentDate = e.target.value;
-                    this.renderStudents();
+                    this.loadTemporaryAttendance();
                 });
                 
                 document.getElementById('student-list').addEventListener('click', e => {
@@ -529,6 +576,19 @@
                 
                 document.getElementById('cancel-share-modal').addEventListener('click', () => this.closeModal('share-modal'));
                 document.getElementById('send-whatsapp-btn').addEventListener('click', () => this.shareViaWhatsApp());
+
+                // Handlers para el nuevo modal
+                document.getElementById('cancel-exit-btn').addEventListener('click', () => this.closeModal('unsaved-changes-modal'));
+                document.getElementById('discard-and-exit-btn').addEventListener('click', () => {
+                    this.hasUnsavedChanges = false;
+                    this.closeModal('unsaved-changes-modal');
+                    document.getElementById('back-to-groups-btn').click();
+                });
+                document.getElementById('save-and-exit-btn').addEventListener('click', () => {
+                    this.saveData();
+                    this.closeModal('unsaved-changes-modal');
+                    document.getElementById('back-to-groups-btn').click();
+                });
             },
             
             showStudentMenu(studentId, buttonElement) {
@@ -620,8 +680,8 @@
                     };
                     this.data.groups.push(newGroup);
                 }
-
-                this.saveData();
+                // Aquí sí guardamos directamente porque afecta la estructura, no la asistencia diaria.
+                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                 this.renderGroups();
                 this.closeModal('group-modal');
             },
@@ -629,7 +689,7 @@
                 if (confirm('¿Estás seguro de que quieres eliminar este grupo y todos sus registros de asistencia?')) {
                     this.data.groups = this.data.groups.filter(g => g.id !== groupId);
                     delete this.data.attendance[groupId];
-                    this.saveData();
+                    localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                     this.renderGroups();
                 }
             },
@@ -650,7 +710,7 @@
                 const student = group.students.find(s => s.id === studentId);
                 student.name = newName;
                 
-                this.saveData();
+                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                 this.renderStudents();
                 this.closeModal('edit-student-modal');
             },
@@ -661,34 +721,28 @@
                     Object.keys(this.data.attendance[this.currentGroupId] || {}).forEach(date => {
                         delete this.data.attendance[this.currentGroupId][date][studentId];
                     });
-                    this.saveData();
-                    this.renderStudents();
+                    localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+                    this.loadTemporaryAttendance();
                 }
             },
             
             // Lógica de Asistencia
             setAttendance(studentId, status) {
-                if (!this.data.attendance[this.currentGroupId]) {
-                    this.data.attendance[this.currentGroupId] = {};
-                }
-                if (!this.data.attendance[this.currentGroupId][this.currentDate]) {
-                    this.data.attendance[this.currentGroupId][this.currentDate] = {};
-                }
+                const currentRecord = this.tempAttendanceForDate[studentId] || {};
                 
-                const currentRecord = this.data.attendance[this.currentGroupId][this.currentDate][studentId] || {};
-                
-                if(currentRecord.status === status) return;
+                if(currentRecord.status === status && status !== 'present') return; // Permitir marcar presente varias veces
                 
                 currentRecord.status = status;
                 
-                this.data.attendance[this.currentGroupId][this.currentDate][studentId] = currentRecord;
-                this.saveData();
+                this.tempAttendanceForDate[studentId] = currentRecord;
+                this.hasUnsavedChanges = true;
+                document.getElementById('save-attendance-btn').classList.add('save-pending');
                 this.renderStudents();
             },
             
             openCommentModal(studentId) {
                 this.currentStudentId = studentId;
-                const record = this.data.attendance[this.currentGroupId]?.[this.currentDate]?.[studentId] || {};
+                const record = this.tempAttendanceForDate[studentId] || {};
                 document.getElementById('comment-student-id').value = studentId;
                 document.getElementById('comment-text').value = record.comment || '';
                 this.openModal('comment-modal');
@@ -698,31 +752,27 @@
                 const studentId = document.getElementById('comment-student-id').value;
                 const comment = document.getElementById('comment-text').value.trim();
                 
-                if (!this.data.attendance[this.currentGroupId]) this.data.attendance[this.currentGroupId] = {};
-                if (!this.data.attendance[this.currentGroupId][this.currentDate]) this.data.attendance[this.currentGroupId][this.currentDate] = {};
-                if (!this.data.attendance[this.currentGroupId][this.currentDate][studentId]) {
-                    this.data.attendance[this.currentGroupId][this.currentDate][studentId] = { status: 'present' };
+                if (!this.tempAttendanceForDate[studentId]) {
+                    this.tempAttendanceForDate[studentId] = { status: 'present' };
                 }
                 
-                this.data.attendance[this.currentGroupId][this.currentDate][studentId].comment = comment;
-                this.saveData();
+                this.tempAttendanceForDate[studentId].comment = comment;
+                this.hasUnsavedChanges = true;
+                document.getElementById('save-attendance-btn').classList.add('save-pending');
                 this.renderStudents();
                 this.closeModal('comment-modal');
             },
             
             markAllAsPresent(){
-                if (!this.data.attendance[this.currentGroupId]) this.data.attendance[this.currentGroupId] = {};
-                const attendanceForDate = this.data.attendance[this.currentGroupId][this.currentDate] || {};
-                
                 const group = this.data.groups.find(g => g.id === this.currentGroupId);
                 group.students.forEach(student => {
-                     const record = attendanceForDate[student.id] || {};
+                     const record = this.tempAttendanceForDate[student.id] || {};
                      record.status = 'present';
-                     attendanceForDate[student.id] = record;
+                     this.tempAttendanceForDate[student.id] = record;
                 });
-                this.data.attendance[this.currentGroupId][this.currentDate] = attendanceForDate;
                 
-                this.saveData();
+                this.hasUnsavedChanges = true;
+                document.getElementById('save-attendance-btn').classList.add('save-pending');
                 this.renderStudents();
             },
             
@@ -871,7 +921,7 @@
                 
                 if (student) {
                     student.phone = phone;
-                    this.saveData();
+                    this.saveData(); // Guarda el número de teléfono
                 }
 
                 const allAttendance = this.data.attendance[this.currentGroupId] || {};
@@ -933,7 +983,7 @@
                 this.data.userProfile.teacherName = document.getElementById('teacher-name').value.trim();
                 this.data.userProfile.specialty = document.getElementById('teacher-specialty').value.trim();
                 this.data.config.backupFrequency = document.getElementById('backup-frequency').value;
-                this.saveData();
+                localStorage.setItem('attendanceApp', JSON.stringify(this.data)); // Guardado directo
                 this.showToast('Configuración guardada');
                 this.closeModal('settings-modal');
             },
@@ -952,7 +1002,7 @@
                 URL.revokeObjectURL(url);
                 
                 this.data.config.lastBackup = new Date().toISOString();
-                this.saveData();
+                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                 this.showToast('Copia de seguridad descargada.');
             },
             restoreBackup(event) {
@@ -966,7 +1016,7 @@
                         if (restoredData.groups && restoredData.attendance) {
                             if (confirm('Se reemplazará toda la información actual. ¿Continuar?')) {
                                 this.data = restoredData;
-                                this.saveData();
+                                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                                 this.renderGroups();
                                 this.showView('groups-view');
                                 this.closeModal('settings-modal');
