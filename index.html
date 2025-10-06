@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Asistencia</title>
+    <!-- Tailwind CSS para un diseño moderno y responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome para los iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- jsPDF para generar PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- Chart.js para las gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas para capturar los gráficos como imagen -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* Estilos personalizados para mejorar la experiencia */
+        body {
+            -webkit-tap-highlight-color: transparent; /* Evita el destello azul al tocar en móviles */
+        }
+        .main-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        /* Clases para ocultar/mostrar vistas */
+        .hidden-view {
+            display: none;
+        }
+        .status-icon {
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .status-icon.selected {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            border-radius: 50%;
+        }
+        .comment-btn.has-comment {
+            color: #3B82F6; /* Azul */
+        }
+        .status-present { color: #10B981; } /* Verde */
+        .status-late { color: #F59E0B; } /* Ámbar */
+        .status-absent { color: #EF4444; } /* Rojo */
+        .status-justified { color: #6366F1; } /* Indigo */
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #2d3748;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+        .toast.show {
+            opacity: 1;
+            bottom: 30px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="main-container bg-white min-h-screen">
+
+        <!-- Vista 1: Lista de Grupos -->
+        <div id="groups-view">
+            <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
+                <h1 class="text-xl font-bold">Mis Grupos</h1>
+                <button id="settings-btn" class="text-2xl"><i class="fas fa-cog"></i></button>
+            </header>
+            <main class="p-4">
+                <div id="groups-list" class="space-y-3">
+                    <!-- Los grupos se cargarán aquí dinámicamente -->
+                </div>
+            </main>
+            <div class="fixed bottom-6 right-6">
+                <button id="add-group-btn" class="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Vista 2: Lista de Estudiantes (Toma de Asistencia) -->
+        <div id="students-view" class="hidden-view">
+            <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
+                <button id="back-to-groups-btn" class="text-2xl"><i class="fas fa-arrow-left"></i></button>
+                <h1 id="group-name-header" class="text-xl font-bold"></h1>
+                <div class="flex items-center gap-4">
+                    <button id="save-attendance-btn" class="text-2xl"><i class="fas fa-save"></i></button>
+                    <button id="generate-report-btn" class="text-2xl"><i class="fas fa-chart-pie"></i></button>
+                </div>
+            </header>
+            <main class="p-4">
+                <div class="bg-white p-4 rounded-xl shadow-md mb-4">
+                    <div class="flex items-center justify-between">
+                        <input type="date" id="attendance-date" class="border-gray-300 rounded-lg p-2 text-lg">
+                        <div id="attendance-summary" class="text-sm space-x-3 flex items-center">
+                            <!-- Resumen se carga aquí -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mb-4">
+                     <button id="mark-all-present-btn" class="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-green-600 transition">
+                        <i class="fas fa-check-double"></i> Todos Presentes
+                    </button>
+                </div>
+                <div id="student-list" class="space-y-3">
+                    <!-- La lista de estudiantes se cargará aquí -->
+                </div>
+            </main>
+        </div>
+
+    </div>
+    
+    <!-- Toast de Notificación -->
+    <div id="toast-notification" class="toast"></div>
+
+    <!-- Modal para Añadir/Editar Grupo -->
+    <div id="group-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 id="group-modal-title" class="text-2xl font-bold mb-4">Nuevo Grupo</h2>
+            <input type="hidden" id="group-id">
+            <div class="mb-4">
+                <label for="group-name" class="block text-gray-700 mb-1">Nombre del Grupo</label>
+                <input type="text" id="group-name" class="w-full border-gray-300 rounded-lg p-2" placeholder="Ej: Matemáticas 5°A">
+            </div>
+            <div class="mb-4">
+                <label for="student-names" class="block text-gray-700 mb-1">Lista de Alumnos (uno por línea)</label>
+                <textarea id="student-names" rows="8" class="w-full border-gray-300 rounded-lg p-2" placeholder="Pega aquí los nombres..."></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-group-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="save-group-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Añadir Comentario -->
+    <div id="comment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Añadir Comentario</h2>
+            <input type="hidden" id="comment-student-id">
+            <textarea id="comment-text" rows="4" class="w-full border-gray-300 rounded-lg p-2" placeholder="Escribe un comentario..."></textarea>
+            <div class="flex justify-end gap-3 mt-4">
+                <button id="cancel-comment-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="save-comment-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Editar nombre de Alumno -->
+    <div id="edit-student-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Editar Alumno</h2>
+            <input type="hidden" id="edit-student-id">
+             <div class="mb-4">
+                <label for="edit-student-name" class="block text-gray-700 mb-1">Nombre del Alumno</label>
+                <input type="text" id="edit-student-name" class="w-full border-gray-300 rounded-lg p-2">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-edit-student-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="save-edit-student-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Reportes -->
+    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Generar Reporte</h2>
+            <div class="space-y-4">
+                 <button data-report-type="daily-general" class="w-full report-option-btn bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Reporte del Día Actual</button>
+                 <button data-report-type="consolidated-general" class="w-full report-option-btn bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Reporte General Consolidado</button>
+                 <button data-report-type="student-picker" class="w-full report-option-btn bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Reporte por Estudiante</button>
+                 <button data-report-type="absences" class="w-full report-option-btn bg-red-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Reporte Solo de Faltas</button>
+                 <hr>
+                 <button data-report-type="share-picker" class="w-full report-option-btn bg-green-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition"><i class="fab fa-whatsapp"></i> Compartir por Estudiante</button>
+            </div>
+             <div class="mt-6 flex justify-end">
+                  <button id="cancel-report-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Configuración y Backup -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 overflow-y-auto max-h-full">
+            <h2 class="text-2xl font-bold mb-6">Configuración</h2>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold border-b pb-2 mb-4">Datos del Docente</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="institution-name" class="block text-gray-700 mb-1">Nombre de la Institución</label>
+                        <input type="text" id="institution-name" class="w-full border-gray-300 rounded-lg p-2">
+                    </div>
+                    <div>
+                        <label for="teacher-name" class="block text-gray-700 mb-1">Nombre del Docente</label>
+                        <input type="text" id="teacher-name" class="w-full border-gray-300 rounded-lg p-2">
+                    </div>
+                    <div>
+                        <label for="teacher-specialty" class="block text-gray-700 mb-1">Especialidad (Opcional)</label>
+                        <input type="text" id="teacher-specialty" class="w-full border-gray-300 rounded-lg p-2">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold border-b pb-2 mb-4">Copia de Seguridad</h3>
+                 <div class="mb-4">
+                    <label for="backup-frequency" class="block text-gray-700 mb-2">Frecuencia de backup automático:</label>
+                    <select id="backup-frequency" class="w-full border-gray-300 rounded-lg p-2">
+                        <option value="none">Nunca</option>
+                        <option value="daily">Diario</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="monthly">Mensual</option>
+                    </select>
+                </div>
+                <div class="space-y-3 mt-6">
+                     <button id="manual-backup-btn" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Hacer copia de seguridad ahora</button>
+                     <label class="w-full text-center block">
+                         <span class="w-full bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg shadow transition cursor-pointer">Restaurar desde archivo</span>
+                         <input type="file" id="restore-backup-input" class="hidden" accept=".json">
+                    </label>
+                </div>
+            </div>
+
+             <div class="mt-8 flex justify-end gap-3">
+                  <button id="close-settings-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cerrar</button>
+                  <button id="save-settings-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Selector de Reporte por Estudiante -->
+    <div id="student-report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Reporte por Estudiante</h2>
+            <div class="mb-4">
+                <label for="student-report-select" class="block text-gray-700 mb-1">Seleccionar Estudiante</label>
+                <select id="student-report-select" class="w-full border-gray-300 rounded-lg p-2"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="student-report-start-date" class="block text-gray-700 mb-1">Desde</label>
+                    <input type="date" id="student-report-start-date" class="w-full border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="student-report-end-date" class="block text-gray-700 mb-1">Hasta</label>
+                    <input type="date" id="student-report-end-date" class="w-full border-gray-300 rounded-lg p-2">
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Dejar las fechas en blanco para incluir todos los registros.</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-student-report-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="generate-student-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Generar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Compartir -->
+    <div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Compartir por WhatsApp</h2>
+            <div class="mb-4">
+                <label for="share-student-select" class="block text-gray-700 mb-1">Estudiante</slabel>
+                <select id="share-student-select" class="w-full border-gray-300 rounded-lg p-2"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="share-start-date" class="block text-gray-700 mb-1">Desde</label>
+                    <input type="date" id="share-start-date" class="w-full border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="share-end-date" class="block text-gray-700 mb-1">Hasta</label>
+                    <input type="date" id="share-end-date" class="w-full border-gray-300 rounded-lg p-2">
+                </div>
+            </div>
+             <div class="mb-4">
+                <label for="whatsapp-number" class="block text-gray-700 mb-1">Número de WhatsApp</label>
+                <input type="tel" id="whatsapp-number" class="w-full border-gray-300 rounded-lg p-2" placeholder="Ej: +51987654321">
+            </div>
+            <div class="flex justify-end gap-3 mt-4">
+                <button id="cancel-share-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="send-whatsapp-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Namespace para la aplicación
+        const app = {
+            data: {
+                groups: [],
+                attendance: {},
+                userProfile: {
+                    institution: '',
+                    teacherName: '',
+                    specialty: ''
+                },
+                config: {
+                    backupFrequency: 'none',
+                    lastBackup: null,
+                }
+            },
+            currentGroupId: null,
+            currentStudentId: null,
+            currentDate: new Date().toISOString().slice(0, 10),
+            statusMap: { present: 'Asistió', late: 'Tardanza', absent: 'Faltó', justified: 'F. Justificada' },
+            
+            // Inicialización de la app
+            init() {
+                this.loadData();
+                this.renderGroups();
+                this.attachEventListeners();
+                this.checkAutoBackup();
+            },
+
+            // Gestión de datos
+            loadData() {
+                const savedData = localStorage.getItem('attendanceApp');
+                if (savedData) {
+                    const parsedData = JSON.parse(savedData);
+                    // Asegurar compatibilidad con versiones antiguas
+                    this.data = {
+                        ...this.data,
+                        ...parsedData
+                    };
+                }
+            },
+            saveData() {
+                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+            },
+
+            // Navegación entre vistas
+            showView(viewId) {
+                document.getElementById('groups-view').classList.add('hidden-view');
+                document.getElementById('students-view').classList.add('hidden-view');
+                document.getElementById(viewId).classList.remove('hidden-view');
+            },
+
+            // Lógica de renderizado
+            renderGroups() {
+                const groupsList = document.getElementById('groups-list');
+                groupsList.innerHTML = '';
+                if(this.data.groups.length === 0){
+                    groupsList.innerHTML = `<div class="text-center text-gray-500 mt-10">
+                        <i class="fas fa-users-slash text-5xl"></i>
+                        <p class="mt-4 text-lg">No hay grupos creados.</p>
+                        <p>Toca el botón '+' para empezar.</p>
+                    </div>`;
+                    return;
+                }
+
+                this.data.groups.forEach(group => {
+                    const groupElement = document.createElement('div');
+                    groupElement.className = 'bg-white p-4 rounded-xl shadow-md flex items-center justify-between';
+                    groupElement.innerHTML = `
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">${group.name}</h3>
+                            <p class="text-gray-500">${group.students.length} alumnos</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button data-group-id="${group.id}" class="view-group-btn bg-blue-500 text-white rounded-lg px-4 py-2"><i class="fas fa-list-check"></i></button>
+                            <button data-group-id="${group.id}" class="edit-group-btn text-gray-500 text-xl"><i class="fas fa-pencil-alt"></i></button>
+                            <button data-group-id="${group.id}" class="delete-group-btn text-red-500 text-xl"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    groupsList.appendChild(groupElement);
+                });
+            },
+            
+            renderStudents() {
+                if (!this.currentGroupId) return;
+
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                if (!group) return;
+
+                document.getElementById('group-name-header').textContent = group.name;
+                const studentList = document.getElementById('student-list');
+                studentList.innerHTML = '';
+                
+                const attendanceForDate = this.data.attendance[this.currentGroupId]?.[this.currentDate] || {};
+
+                group.students.forEach(student => {
+                    const record = attendanceForDate[student.id] || {};
+                    const studentStatus = record.status || 'present';
+                    const hasComment = record.comment && record.comment.trim() !== '';
+
+                    const studentElement = document.createElement('div');
+                    studentElement.className = 'bg-white p-4 rounded-xl shadow-md flex items-center justify-between';
+                    studentElement.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="bg-gray-200 rounded-full w-12 h-12 flex items-center justify-center text-xl text-gray-600">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="font-semibold text-lg">${student.name}</span>
+                        </div>
+                        <div class="flex items-center gap-2 md:gap-3 text-3xl">
+                           <button data-student-id="${student.id}" data-status="present" class="status-btn status-icon ${studentStatus === 'present' ? 'selected status-present' : 'text-gray-300'}"><i class="fas fa-check-circle"></i></button>
+                           <button data-student-id="${student.id}" data-status="late" class="status-btn status-icon ${studentStatus === 'late' ? 'selected status-late' : 'text-gray-300'}"><i class="fas fa-clock"></i></button>
+                           <button data-student-id="${student.id}" data-status="absent" class="status-btn status-icon ${studentStatus === 'absent' ? 'selected status-absent' : 'text-gray-300'}"><i class="fas fa-times-circle"></i></button>
+                           <button data-student-id="${student.id}" data-status="justified" class="status-btn status-icon ${studentStatus === 'justified' ? 'selected status-justified' : 'text-gray-300'}"><i class="fas fa-file-medical"></i></button>
+                           <button data-student-id="${student.id}" class="comment-btn status-icon text-gray-300 text-2xl ${hasComment ? 'has-comment' : ''}"><i class="fas fa-comment-dots"></i></button>
+                           <div class="relative inline-block text-left">
+                               <button data-student-id="${student.id}" class="student-menu-btn text-gray-500 text-xl ml-1"><i class="fas fa-ellipsis-v"></i></button>
+                           </div>
+                        </div>
+                    `;
+                    studentList.appendChild(studentElement);
+                });
+                this.updateAttendanceSummary();
+            },
+            
+            updateAttendanceSummary(){
+                if (!this.currentGroupId) return;
+                const attendanceForDate = this.data.attendance[this.currentGroupId]?.[this.currentDate] || {};
+                const summary = { present: 0, late: 0, absent: 0, justified: 0 };
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+
+                const totalStudents = group.students.length;
+                let presentCount = totalStudents;
+
+                Object.values(attendanceForDate).forEach(record => {
+                    if (record.status !== 'present') presentCount--;
+                    if (summary.hasOwnProperty(record.status)) {
+                        if (record.status !== 'present') summary[record.status]++;
+                    }
+                });
+                summary.present = presentCount;
+
+                document.getElementById('attendance-summary').innerHTML = `
+                    <span title="Total Alumnos"><i class="fas fa-users text-blue-500"></i> ${totalStudents}</span>
+                    <span title="Presentes"><i class="fas fa-check-circle status-present"></i> ${summary.present}</span>
+                    <span title="Tardanzas"><i class="fas fa-clock status-late"></i> ${summary.late}</span>
+                    <span title="Faltas"><i class="fas fa-times-circle status-absent"></i> ${summary.absent}</span>
+                    <span title="Justificadas"><i class="fas fa-file-medical status-justified"></i> ${summary.justified}</span>
+                `;
+            },
+            
+            // Event Handlers
+            attachEventListeners() {
+                document.getElementById('add-group-btn').addEventListener('click', () => this.openGroupModal());
+                document.getElementById('cancel-group-modal').addEventListener('click', () => this.closeModal('group-modal'));
+                document.getElementById('save-group-btn').addEventListener('click', () => this.saveGroup());
+
+                document.getElementById('groups-list').addEventListener('click', e => {
+                    const viewBtn = e.target.closest('.view-group-btn');
+                    const editBtn = e.target.closest('.edit-group-btn');
+                    const deleteBtn = e.target.closest('.delete-group-btn');
+
+                    if (viewBtn) {
+                        this.currentGroupId = viewBtn.dataset.groupId;
+                        document.getElementById('attendance-date').value = this.currentDate;
+                        this.renderStudents();
+                        this.showView('students-view');
+                    }
+                    if(editBtn){ this.openGroupModal(editBtn.dataset.groupId); }
+                    if(deleteBtn){ this.deleteGroup(deleteBtn.dataset.groupId); }
+                });
+                
+                document.getElementById('back-to-groups-btn').addEventListener('click', () => {
+                    this.currentGroupId = null;
+                    this.renderGroups();
+                    this.showView('groups-view');
+                });
+                
+                document.getElementById('save-attendance-btn').addEventListener('click', () => {
+                    this.saveData();
+                    this.showToast('Asistencia guardada');
+                });
+
+                document.getElementById('attendance-date').addEventListener('change', e => {
+                    this.currentDate = e.target.value;
+                    this.renderStudents();
+                });
+                
+                document.getElementById('student-list').addEventListener('click', e => {
+                    const statusBtn = e.target.closest('.status-btn');
+                    const commentBtn = e.target.closest('.comment-btn');
+                    const menuBtn = e.target.closest('.student-menu-btn');
+
+                    if(statusBtn){ this.setAttendance(statusBtn.dataset.studentId, statusBtn.dataset.status); }
+                    if(commentBtn){ this.openCommentModal(commentBtn.dataset.studentId); }
+                    if(menuBtn){ this.showStudentMenu(menuBtn.dataset.studentId, menuBtn); }
+                });
+                
+                document.getElementById('mark-all-present-btn').addEventListener('click', () => this.markAllAsPresent());
+                
+                document.getElementById('cancel-comment-modal').addEventListener('click', () => this.closeModal('comment-modal'));
+                document.getElementById('save-comment-btn').addEventListener('click', () => this.saveComment());
+
+                document.getElementById('cancel-edit-student-modal').addEventListener('click', () => this.closeModal('edit-student-modal'));
+                document.getElementById('save-edit-student-btn').addEventListener('click', () => this.saveStudentEdit());
+                
+                document.getElementById('generate-report-btn').addEventListener('click', () => this.openModal('report-modal'));
+                document.getElementById('cancel-report-modal').addEventListener('click', () => this.closeModal('report-modal'));
+                
+                document.querySelector('#report-modal').addEventListener('click', e => {
+                    const reportBtn = e.target.closest('.report-option-btn');
+                    if (reportBtn) {
+                        const reportType = reportBtn.dataset.reportType;
+                        if(reportType === 'student-picker') {
+                           this.openStudentReportModal();
+                        } else if(reportType === 'share-picker') {
+                           this.openShareModal();
+                        } else {
+                           this.generatePDF(reportType);
+                        }
+                    }
+                });
+                
+                document.getElementById('settings-btn').addEventListener('click', () => this.openSettingsModal());
+                document.getElementById('close-settings-modal').addEventListener('click', () => this.closeModal('settings-modal'));
+                document.getElementById('save-settings-btn').addEventListener('click', () => this.saveSettings());
+                document.getElementById('manual-backup-btn').addEventListener('click', () => this.createBackup());
+                document.getElementById('restore-backup-input').addEventListener('change', (e) => this.restoreBackup(e));
+
+                document.getElementById('cancel-student-report-modal').addEventListener('click', () => this.closeModal('student-report-modal'));
+                document.getElementById('generate-student-report-btn').addEventListener('click', () => this.generateStudentPDFReport());
+                
+                document.getElementById('cancel-share-modal').addEventListener('click', () => this.closeModal('share-modal'));
+                document.getElementById('send-whatsapp-btn').addEventListener('click', () => this.shareViaWhatsApp());
+            },
+            
+            showStudentMenu(studentId, buttonElement) {
+                const existingMenu = document.querySelector('.student-options-menu');
+                if(existingMenu) existingMenu.remove();
+
+                const menu = document.createElement('div');
+                menu.className = 'student-options-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10';
+                menu.innerHTML = `
+                    <a href="#" data-action="edit" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Editar Alumno</a>
+                    <a href="#" data-action="delete" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Eliminar Alumno</a>
+                `;
+
+                menu.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if(e.target.dataset.action === 'edit') { this.openEditStudentModal(studentId); } 
+                    else if(e.target.dataset.action === 'delete') { this.deleteStudent(studentId); }
+                    menu.remove();
+                });
+                buttonElement.parentElement.appendChild(menu);
+                setTimeout(() => {
+                    document.addEventListener('click', function closeMenu(event) {
+                        if (!menu.contains(event.target)) {
+                            menu.remove();
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    });
+                }, 0);
+            },
+            
+            openGroupModal(groupId = null) {
+                const modalTitle = document.getElementById('group-modal-title');
+                const groupIdInput = document.getElementById('group-id');
+                const groupNameInput = document.getElementById('group-name');
+                const studentNamesTextarea = document.getElementById('student-names');
+
+                if (groupId) {
+                    const group = this.data.groups.find(g => g.id === groupId);
+                    modalTitle.textContent = 'Editar Grupo';
+                    groupIdInput.value = group.id;
+                    groupNameInput.value = group.name;
+                    studentNamesTextarea.value = group.students.map(s => s.name).join('\n');
+                } else {
+                    modalTitle.textContent = 'Nuevo Grupo';
+                    groupIdInput.value = '';
+                    groupNameInput.value = '';
+                    studentNamesTextarea.value = '';
+                }
+                this.openModal('group-modal');
+            },
+
+            saveGroup() {
+                const groupId = document.getElementById('group-id').value;
+                const groupName = document.getElementById('group-name').value.trim();
+                const studentNames = document.getElementById('student-names').value.trim().split('\n').filter(name => name.trim() !== '');
+
+                if (!groupName || studentNames.length === 0) {
+                    alert('El nombre del grupo y la lista de alumnos no pueden estar vacíos.');
+                    return;
+                }
+
+                if (groupId) { // Editando
+                    const group = this.data.groups.find(g => g.id === groupId);
+                    group.name = groupName;
+                    
+                    const existingStudentsMap = new Map(group.students.map(s => [s.name, s]));
+                    const newStudentList = [];
+                    
+                    studentNames.forEach(name => {
+                        const trimmedName = name.trim();
+                        const existingStudent = existingStudentsMap.get(trimmedName);
+                        newStudentList.push({
+                            id: existingStudent?.id || `s_${Date.now()}_${Math.random()}`,
+                            name: trimmedName,
+                            phone: existingStudent?.phone || ''
+                        });
+                    });
+                    group.students = newStudentList;
+
+                } else { // Creando
+                    const newGroup = {
+                        id: `g_${Date.now()}`,
+                        name: groupName,
+                        students: studentNames.map(name => ({
+                            id: `s_${Date.now()}_${Math.random()}`,
+                            name: name.trim(),
+                            phone: ''
+                        }))
+                    };
+                    this.data.groups.push(newGroup);
+                }
+
+                this.saveData();
+                this.renderGroups();
+                this.closeModal('group-modal');
+            },
+            deleteGroup(groupId) {
+                if (confirm('¿Estás seguro de que quieres eliminar este grupo y todos sus registros de asistencia?')) {
+                    this.data.groups = this.data.groups.filter(g => g.id !== groupId);
+                    delete this.data.attendance[groupId];
+                    this.saveData();
+                    this.renderGroups();
+                }
+            },
+            openEditStudentModal(studentId){
+                this.currentStudentId = studentId;
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                const student = group.students.find(s => s.id === studentId);
+                document.getElementById('edit-student-id').value = studentId;
+                document.getElementById('edit-student-name').value = student.name;
+                this.openModal('edit-student-modal');
+            },
+            saveStudentEdit(){
+                const studentId = document.getElementById('edit-student-id').value;
+                const newName = document.getElementById('edit-student-name').value.trim();
+                if(!newName) return;
+                
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                const student = group.students.find(s => s.id === studentId);
+                student.name = newName;
+                
+                this.saveData();
+                this.renderStudents();
+                this.closeModal('edit-student-modal');
+            },
+            deleteStudent(studentId) {
+                if(confirm('¿Estás seguro de eliminar a este alumno? Se borrarán todos sus registros de asistencia.')){
+                    const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                    group.students = group.students.filter(s => s.id !== studentId);
+                    Object.keys(this.data.attendance[this.currentGroupId] || {}).forEach(date => {
+                        delete this.data.attendance[this.currentGroupId][date][studentId];
+                    });
+                    this.saveData();
+                    this.renderStudents();
+                }
+            },
+            
+            // Lógica de Asistencia
+            setAttendance(studentId, status) {
+                if (!this.data.attendance[this.currentGroupId]) {
+                    this.data.attendance[this.currentGroupId] = {};
+                }
+                if (!this.data.attendance[this.currentGroupId][this.currentDate]) {
+                    this.data.attendance[this.currentGroupId][this.currentDate] = {};
+                }
+                
+                const currentRecord = this.data.attendance[this.currentGroupId][this.currentDate][studentId] || {};
+                
+                if(currentRecord.status === status) return;
+                
+                currentRecord.status = status;
+                
+                this.data.attendance[this.currentGroupId][this.currentDate][studentId] = currentRecord;
+                this.saveData();
+                this.renderStudents();
+            },
+            
+            openCommentModal(studentId) {
+                this.currentStudentId = studentId;
+                const record = this.data.attendance[this.currentGroupId]?.[this.currentDate]?.[studentId] || {};
+                document.getElementById('comment-student-id').value = studentId;
+                document.getElementById('comment-text').value = record.comment || '';
+                this.openModal('comment-modal');
+            },
+            
+            saveComment(){
+                const studentId = document.getElementById('comment-student-id').value;
+                const comment = document.getElementById('comment-text').value.trim();
+                
+                if (!this.data.attendance[this.currentGroupId]) this.data.attendance[this.currentGroupId] = {};
+                if (!this.data.attendance[this.currentGroupId][this.currentDate]) this.data.attendance[this.currentGroupId][this.currentDate] = {};
+                if (!this.data.attendance[this.currentGroupId][this.currentDate][studentId]) {
+                    this.data.attendance[this.currentGroupId][this.currentDate][studentId] = { status: 'present' };
+                }
+                
+                this.data.attendance[this.currentGroupId][this.currentDate][studentId].comment = comment;
+                this.saveData();
+                this.renderStudents();
+                this.closeModal('comment-modal');
+            },
+            
+            markAllAsPresent(){
+                if (!this.data.attendance[this.currentGroupId]) this.data.attendance[this.currentGroupId] = {};
+                const attendanceForDate = this.data.attendance[this.currentGroupId][this.currentDate] || {};
+                
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                group.students.forEach(student => {
+                     const record = attendanceForDate[student.id] || {};
+                     record.status = 'present';
+                     attendanceForDate[student.id] = record;
+                });
+                this.data.attendance[this.currentGroupId][this.currentDate] = attendanceForDate;
+                
+                this.saveData();
+                this.renderStudents();
+            },
+            
+            // Lógica de Reportes PDF
+            async generatePDF(reportType, options = {}) {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape' });
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                const { institution, teacherName, specialty } = this.data.userProfile;
+                
+                doc.setFontSize(18);
+                doc.text(institution || 'Reporte de Asistencia', 14, 22);
+                doc.setFontSize(11);
+                doc.setTextColor(100);
+                doc.text(`Curso: ${group.name}`, 14, 30);
+                doc.text(`Docente: ${teacherName || 'No especificado'} ${specialty ? '('+specialty+')' : ''}`, 14, 36);
+
+
+                let reportTitle = '';
+                const body = [];
+                const head = [['Estudiante', 'Fecha', 'Estado', 'Comentario']];
+                
+                const allAttendance = this.data.attendance[this.currentGroupId] || {};
+
+                switch (reportType) {
+                    case 'daily-general':
+                        reportTitle = `Resumen del Día: ${this.currentDate}`;
+                        const attendanceForDate = allAttendance[this.currentDate] || {};
+                        group.students.forEach(student => {
+                            const record = attendanceForDate[student.id] || { status: 'present', comment: '' };
+                            body.push([student.name, this.currentDate, this.statusMap[record.status], record.comment || '']);
+                        });
+                        break;
+                    
+                    case 'consolidated-general':
+                        reportTitle = 'Resumen General Consolidado (Todas las Fechas)';
+                        Object.keys(allAttendance).sort().forEach(date => {
+                            group.students.forEach(student => {
+                                const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
+                                body.push([student.name, date, this.statusMap[record.status], record.comment || '']);
+                            });
+                        });
+                        break;
+                        
+                    case 'student':
+                        const student = group.students.find(s => s.id === options.studentId);
+                        reportTitle = `Resumen para ${student.name}`;
+                        if(options.startDate && options.endDate) {
+                            reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
+                        }
+                        Object.keys(allAttendance).sort().forEach(date => {
+                            if ((!options.startDate || date >= options.startDate) && (!options.endDate || date <= options.endDate)) {
+                                const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
+                                body.push([student.name, date, this.statusMap[record.status], record.comment || '']);
+                            }
+                        });
+                        break;
+
+                    case 'absences':
+                        reportTitle = 'Resumen Consolidado de Faltas y Tardanzas';
+                        Object.keys(allAttendance).sort().forEach(date => {
+                           Object.keys(allAttendance[date]).forEach(studentId => {
+                               const record = allAttendance[date][studentId];
+                               if(['absent', 'late', 'justified'].includes(record.status)){
+                                   const student = group.students.find(s => s.id === studentId);
+                                   if(student) {
+                                       body.push([student.name, date, this.statusMap[record.status], record.comment || '']);
+                                   }
+                               }
+                           });
+                        });
+                        break;
+                }
+                
+                if (body.length === 0) {
+                    alert('No hay datos para generar este reporte.');
+                    return;
+                }
+
+                doc.setFontSize(14);
+                doc.text(reportTitle, 14, 46);
+                doc.autoTable({ head, body, startY: 52, theme: 'striped', headStyles: { fillColor: [22, 160, 133] } });
+                
+                doc.save(`reporte_${group.name.replace(/\s/g, '_')}.pdf`);
+                this.closeModal('report-modal');
+            },
+
+            openStudentReportModal(){
+                const select = document.getElementById('student-report-select');
+                this.populateStudentSelect(select);
+                document.getElementById('student-report-start-date').value = '';
+                document.getElementById('student-report-end-date').value = '';
+                this.openModal('student-report-modal');
+            },
+
+            generateStudentPDFReport() {
+                const studentId = document.getElementById('student-report-select').value;
+                const startDate = document.getElementById('student-report-start-date').value;
+                const endDate = document.getElementById('student-report-end-date').value;
+
+                if (!studentId) {
+                    alert('Por favor, selecciona un estudiante.');
+                    return;
+                }
+                this.generatePDF('student', { studentId, startDate, endDate });
+                this.closeModal('student-report-modal');
+            },
+            
+            // Lógica de Compartir
+            openShareModal() {
+                const select = document.getElementById('share-student-select');
+                this.populateStudentSelect(select);
+                const phoneInput = document.getElementById('whatsapp-number');
+
+                select.onchange = () => {
+                    const studentId = select.value;
+                    if (studentId) {
+                        const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                        const student = group.students.find(s => s.id === studentId);
+                        phoneInput.value = student.phone || '+51';
+                    } else {
+                        phoneInput.value = '+51';
+                    }
+                };
+                
+                phoneInput.value = '+51';
+                document.getElementById('share-start-date').value = this.currentDate;
+                document.getElementById('share-end-date').value = this.currentDate;
+                this.openModal('share-modal');
+            },
+            
+            shareViaWhatsApp() {
+                const studentId = document.getElementById('share-student-select').value;
+                const startDate = document.getElementById('share-start-date').value;
+                const endDate = document.getElementById('share-end-date').value;
+                const phone = document.getElementById('whatsapp-number').value.replace(/\s/g, '');
+                const { teacherName, specialty } = this.data.userProfile;
+
+                if (!studentId || !phone) {
+                    alert('Debes seleccionar un estudiante e ingresar un número de teléfono.');
+                    return;
+                }
+                
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                const student = group.students.find(s => s.id === studentId);
+                
+                if (student) {
+                    student.phone = phone;
+                    this.saveData();
+                }
+
+                const allAttendance = this.data.attendance[this.currentGroupId] || {};
+                
+                let summary = { present: 0, late: 0, absent: 0, justified: 0, total: 0 };
+                let details = '';
+
+                Object.keys(allAttendance).sort().forEach(date => {
+                    if ((!startDate || date >= startDate) && (!endDate || date <= endDate)) {
+                        const record = allAttendance[date][studentId] || { status: 'present' };
+                        summary.total++;
+                        summary[record.status] = (summary[record.status] || 0) + 1;
+                        
+                        if(record.status !== 'present') {
+                            details += `\n- ${date}: ${this.statusMap[record.status].toUpperCase()}${record.comment ? ` (${record.comment})` : ''}`;
+                        }
+                    }
+                });
+
+                let message = `*Resumen de Asistencia para ${student.name}*\n`;
+                message += `Curso: ${group.name}\n`;
+                if(teacherName) message += `Docente: ${teacherName} ${specialty ? '('+specialty+')' : ''}\n`;
+                message += `Periodo: ${startDate || 'Inicio'} a ${endDate || 'Fin'}\n\n`;
+                message += `Asistencias: ${summary.present}\n`;
+                message += `Tardanzas: ${summary.late}\n`;
+                message += `Faltas: ${summary.absent}\n`;
+                message += `Faltas Justificadas: ${summary.justified}\n`;
+                if(details) {
+                    message += `\n*Detalles de Inasistencias:*${details}`;
+                }
+
+                const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+                this.closeModal('share-modal');
+            },
+            
+            populateStudentSelect(selectElement) {
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                selectElement.innerHTML = '<option value="">-- Seleccionar --</option>';
+                group.students.sort((a,b) => a.name.localeCompare(b.name)).forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = student.name;
+                    selectElement.appendChild(option);
+                });
+            },
+
+            openSettingsModal() {
+                const { userProfile, config } = this.data;
+                document.getElementById('institution-name').value = userProfile.institution || '';
+                document.getElementById('teacher-name').value = userProfile.teacherName || '';
+                document.getElementById('teacher-specialty').value = userProfile.specialty || '';
+                document.getElementById('backup-frequency').value = config.backupFrequency || 'none';
+                this.openModal('settings-modal');
+            },
+
+            saveSettings() {
+                this.data.userProfile.institution = document.getElementById('institution-name').value.trim();
+                this.data.userProfile.teacherName = document.getElementById('teacher-name').value.trim();
+                this.data.userProfile.specialty = document.getElementById('teacher-specialty').value.trim();
+                this.data.config.backupFrequency = document.getElementById('backup-frequency').value;
+                this.saveData();
+                this.showToast('Configuración guardada');
+                this.closeModal('settings-modal');
+            },
+
+            // Lógica de Backup
+            createBackup() {
+                 const dataStr = JSON.stringify(this.data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `asistencia_backup_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.data.config.lastBackup = new Date().toISOString();
+                this.saveData();
+                this.showToast('Copia de seguridad descargada.');
+            },
+            restoreBackup(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const restoredData = JSON.parse(e.target.result);
+                        if (restoredData.groups && restoredData.attendance) {
+                            if (confirm('Se reemplazará toda la información actual. ¿Continuar?')) {
+                                this.data = restoredData;
+                                this.saveData();
+                                this.renderGroups();
+                                this.showView('groups-view');
+                                this.closeModal('settings-modal');
+                                alert('Restauración completada.');
+                            }
+                        } else { alert('El archivo no parece ser una copia de seguridad válida.'); }
+                    } catch (err) { alert('Error al leer el archivo de copia de seguridad.'); }
+                };
+                reader.readAsText(file);
+            },
+            checkAutoBackup() {
+                if(!this.data.config) return; // Compatibility for old versions
+                const { backupFrequency, lastBackup } = this.data.config;
+                if(backupFrequency === 'none') return;
+                
+                if(!lastBackup) { this.createBackup(); return; }
+                
+                const lastBackupDate = new Date(lastBackup);
+                const now = new Date();
+                const diffTime = Math.abs(now - lastBackupDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let shouldBackup = false;
+                if(backupFrequency === 'daily' && diffDays >= 1) shouldBackup = true;
+                if(backupFrequency === 'weekly' && diffDays >= 7) shouldBackup = true;
+                if(backupFrequency === 'monthly' && diffDays >= 30) shouldBackup = true;
+                
+                if(shouldBackup) {
+                    this.showToast('Realizando copia de seguridad automática...');
+                    this.createBackup();
+                }
+            },
+
+            // Gestión de Modales y Toast
+            showToast(message) {
+                const toast = document.getElementById('toast-notification');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            },
+            openModal(modalId) {
+                document.getElementById(modalId).classList.remove('hidden');
+            },
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.add('hidden');
+            }
+        };
+
+        // Iniciar la aplicación
+        app.init();
+    });
+    </script>
+</body>
+</html>
+
