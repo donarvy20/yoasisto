@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Asistencia</title>
+    <title>Yoasisto+</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✔️</text></svg>">
     <!-- Tailwind CSS para un diseño moderno y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome para los iconos -->
@@ -74,8 +75,27 @@
         }
         .save-pending i {
             animation: pulse 1.5s infinite;
-            color: #F59E0B; /* Ámbar color for attention */
+            color: #77f672; /* Color verde lima para la atención */
         }
+        .report-table th, .report-table td {
+            min-width: 100px;
+            text-align: center;
+        }
+        .report-table td.status-cell {
+            cursor: pointer;
+        }
+        .report-table th:first-child, .report-table td:first-child {
+            min-width: 180px;
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 10;
+        }
+         .report-table th:first-child {
+             z-index: 20;
+         }
+
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -85,8 +105,11 @@
         <!-- Vista 1: Lista de Grupos -->
         <div id="groups-view">
             <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
-                <h1 class="text-xl font-bold">Mis Grupos</h1>
-                <button id="settings-btn" class="text-2xl"><i class="fas fa-cog"></i></button>
+                <h1 class="text-xl font-bold">Yoasisto+</h1>
+                <div class="flex items-center gap-4">
+                    <button id="info-btn" class="text-2xl"><i class="fas fa-info-circle"></i></button>
+                    <button id="settings-btn" class="text-2xl"><i class="fas fa-cog"></i></button>
+                </div>
             </header>
             <main class="p-4">
                 <div id="groups-list" class="space-y-3">
@@ -127,6 +150,38 @@
                 <div id="student-list" class="space-y-3">
                     <!-- La lista de estudiantes se cargará aquí -->
                 </div>
+            </main>
+        </div>
+
+        <!-- Vista 3: Reporte HTML -->
+        <div id="html-report-view" class="hidden-view">
+            <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
+                <button id="back-to-groups-from-report-btn" class="text-2xl"><i class="fas fa-arrow-left"></i></button>
+                <h1 id="html-report-header" class="text-xl font-bold">Reporte General</h1>
+                <button id="save-html-report-btn" class="text-2xl hidden"><i class="fas fa-save text-amber-400"></i></button>
+            </header>
+            <main class="p-4">
+                <div class="w-full overflow-x-auto border border-gray-200 rounded-lg">
+                    <table id="html-report-table" class="w-full text-sm report-table">
+                        <!-- Contenido de la tabla generado dinámicamente -->
+                    </table>
+                </div>
+            </main>
+        </div>
+
+        <!-- Vista 4: Estadísticas HTML -->
+        <div id="statistics-view" class="hidden-view">
+            <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
+                <button id="back-to-groups-from-stats-btn" class="text-2xl"><i class="fas fa-arrow-left"></i></button>
+                <h1 id="stats-header" class="text-xl font-bold">Estadísticas</h1>
+                <button id="export-stats-pdf-btn" class="text-2xl"><i class="fas fa-file-pdf"></i></button>
+            </header>
+            <main class="p-4" id="stats-container">
+                <h2 id="stats-group-name" class="text-center text-2xl font-bold mb-4"></h2>
+                <div class="max-w-md mx-auto">
+                     <canvas id="stats-chart-canvas"></canvas>
+                </div>
+                <div id="stats-summary" class="mt-6 text-center space-y-2"></div>
             </main>
         </div>
 
@@ -187,7 +242,7 @@
     <!-- Modal de Reportes -->
     <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4">Generar Reporte</h2>
+            <h2 class="text-2xl font-bold mb-4">Generar Reporte PDF</h2>
             <div class="space-y-4">
                  <button data-report-type="daily-general" class="w-full report-option-btn bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Reporte del Día Actual</button>
                  <button data-report-type="consolidated-general" class="w-full report-option-btn bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg shadow transition">Reporte General Consolidado</button>
@@ -320,6 +375,17 @@
         </div>
     </div>
 
+    <!-- Modal de Información -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 text-center">
+            <h2 class="text-2xl font-bold mb-4">Yoasisto+</h2>
+            <p class="text-gray-600 mb-6">Desarrollado por: Yoan J. Marrufo</p>
+            <div class="flex justify-center">
+                <button id="close-info-modal" class="bg-blue-600 text-white px-6 py-2 rounded-lg">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -344,6 +410,7 @@
             statusMap: { present: 'Asistió', late: 'Tardanza', absent: 'Faltó', justified: 'F. Justificada' },
             hasUnsavedChanges: false,
             tempAttendanceForDate: {},
+            statsChart: null,
             
             // Inicialización de la app
             init() {
@@ -381,6 +448,8 @@
             showView(viewId) {
                 document.getElementById('groups-view').classList.add('hidden-view');
                 document.getElementById('students-view').classList.add('hidden-view');
+                document.getElementById('html-report-view').classList.add('hidden-view');
+                document.getElementById('statistics-view').classList.add('hidden-view');
                 document.getElementById(viewId).classList.remove('hidden-view');
             },
             
@@ -413,10 +482,13 @@
                             <h3 class="text-xl font-bold text-gray-800">${group.name}</h3>
                             <p class="text-gray-500">${group.students.length} alumnos</p>
                         </div>
-                        <div class="flex gap-2">
-                            <button data-group-id="${group.id}" class="view-group-btn bg-blue-500 text-white rounded-lg px-4 py-2"><i class="fas fa-list-check"></i></button>
-                            <button data-group-id="${group.id}" class="edit-group-btn text-gray-500 text-xl"><i class="fas fa-pencil-alt"></i></button>
-                            <button data-group-id="${group.id}" class="delete-group-btn text-red-500 text-xl"><i class="fas fa-trash"></i></button>
+                        <div class="flex items-center gap-3">
+                            <button data-group-id="${group.id}" title="Duplicar Grupo" class="duplicate-group-btn text-blue-500 text-xl"><i class="fas fa-copy"></i></button>
+                            <button data-group-id="${group.id}" title="Ver Reporte HTML" class="view-html-report-btn text-green-500 text-xl"><i class="fas fa-file-alt"></i></button>
+                            <button data-group-id="${group.id}" title="Ver Estadísticas" class="view-stats-btn text-indigo-500 text-xl"><i class="fas fa-chart-bar"></i></button>
+                            <button data-group-id="${group.id}" title="Tomar Asistencia" class="view-group-btn bg-blue-500 text-white rounded-lg px-4 py-2"><i class="fas fa-list-check"></i></button>
+                            <button data-group-id="${group.id}" title="Editar Grupo" class="edit-group-btn text-gray-500 text-xl"><i class="fas fa-pencil-alt"></i></button>
+                            <button data-group-id="${group.id}" title="Eliminar Grupo" class="delete-group-btn text-red-500 text-xl"><i class="fas fa-trash"></i></button>
                         </div>
                     `;
                     groupsList.appendChild(groupElement);
@@ -433,7 +505,6 @@
                 const studentList = document.getElementById('student-list');
                 studentList.innerHTML = '';
                 
-                // USA LA DATA TEMPORAL PARA RENDERIZAR
                 const attendanceForDate = this.tempAttendanceForDate || {};
 
                 group.students.forEach(student => {
@@ -492,7 +563,6 @@
                 `;
             },
             
-            // Event Handlers
             attachEventListeners() {
                 document.getElementById('add-group-btn').addEventListener('click', () => this.openGroupModal());
                 document.getElementById('cancel-group-modal').addEventListener('click', () => this.closeModal('group-modal'));
@@ -502,6 +572,9 @@
                     const viewBtn = e.target.closest('.view-group-btn');
                     const editBtn = e.target.closest('.edit-group-btn');
                     const deleteBtn = e.target.closest('.delete-group-btn');
+                    const duplicateBtn = e.target.closest('.duplicate-group-btn');
+                    const htmlReportBtn = e.target.closest('.view-html-report-btn');
+                    const statsBtn = e.target.closest('.view-stats-btn');
 
                     if (viewBtn) {
                         this.currentGroupId = viewBtn.dataset.groupId;
@@ -511,6 +584,9 @@
                     }
                     if(editBtn){ this.openGroupModal(editBtn.dataset.groupId); }
                     if(deleteBtn){ this.deleteGroup(deleteBtn.dataset.groupId); }
+                    if(duplicateBtn) { this.duplicateGroup(duplicateBtn.dataset.groupId); }
+                    if(htmlReportBtn) { this.showHtmlReport(htmlReportBtn.dataset.groupId); }
+                    if(statsBtn) { this.showStatistics(statsBtn.dataset.groupId); }
                 });
                 
                 document.getElementById('back-to-groups-btn').addEventListener('click', () => {
@@ -577,7 +653,7 @@
                 document.getElementById('cancel-share-modal').addEventListener('click', () => this.closeModal('share-modal'));
                 document.getElementById('send-whatsapp-btn').addEventListener('click', () => this.shareViaWhatsApp());
 
-                // Handlers para el nuevo modal
+                // Handlers for unsaved changes modal
                 document.getElementById('cancel-exit-btn').addEventListener('click', () => this.closeModal('unsaved-changes-modal'));
                 document.getElementById('discard-and-exit-btn').addEventListener('click', () => {
                     this.hasUnsavedChanges = false;
@@ -589,6 +665,22 @@
                     this.closeModal('unsaved-changes-modal');
                     document.getElementById('back-to-groups-btn').click();
                 });
+
+                // Handlers for new views and features
+                document.getElementById('back-to-groups-from-report-btn').addEventListener('click', () => this.showView('groups-view'));
+                document.getElementById('back-to-groups-from-stats-btn').addEventListener('click', () => this.showView('groups-view'));
+                document.getElementById('export-stats-pdf-btn').addEventListener('click', () => this.exportStatsToPdf());
+                document.getElementById('save-html-report-btn').addEventListener('click', () => this.saveReportChanges());
+                document.getElementById('html-report-table').addEventListener('click', e => {
+                    const cell = e.target.closest('.status-cell');
+                    if (cell) {
+                        this.handleReportCellClick(cell);
+                    }
+                });
+                
+                // Info Modal
+                document.getElementById('info-btn').addEventListener('click', () => this.openModal('info-modal'));
+                document.getElementById('close-info-modal').addEventListener('click', () => this.closeModal('info-modal'));
             },
             
             showStudentMenu(studentId, buttonElement) {
@@ -650,7 +742,7 @@
                     return;
                 }
 
-                if (groupId) { // Editando
+                if (groupId) {
                     const group = this.data.groups.find(g => g.id === groupId);
                     group.name = groupName;
                     
@@ -668,7 +760,7 @@
                     });
                     group.students = newStudentList;
 
-                } else { // Creando
+                } else {
                     const newGroup = {
                         id: `g_${Date.now()}`,
                         name: groupName,
@@ -680,7 +772,6 @@
                     };
                     this.data.groups.push(newGroup);
                 }
-                // Aquí sí guardamos directamente porque afecta la estructura, no la asistencia diaria.
                 localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                 this.renderGroups();
                 this.closeModal('group-modal');
@@ -691,6 +782,24 @@
                     delete this.data.attendance[groupId];
                     localStorage.setItem('attendanceApp', JSON.stringify(this.data));
                     this.renderGroups();
+                }
+            },
+            duplicateGroup(groupId) {
+                const originalGroup = this.data.groups.find(g => g.id === groupId);
+                if (!originalGroup) return;
+
+                if (confirm(`¿Seguro que quieres duplicar el grupo "${originalGroup.name}"?`)) {
+                    const newGroup = JSON.parse(JSON.stringify(originalGroup));
+                    newGroup.id = `g_${Date.now()}`;
+                    newGroup.name = `${originalGroup.name} (Copia)`;
+                    newGroup.students.forEach(student => {
+                        student.id = `s_${Date.now()}_${Math.random()}`;
+                    });
+
+                    this.data.groups.push(newGroup);
+                    localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+                    this.renderGroups();
+                    this.showToast('Grupo duplicado');
                 }
             },
             openEditStudentModal(studentId){
@@ -726,11 +835,10 @@
                 }
             },
             
-            // Lógica de Asistencia
             setAttendance(studentId, status) {
                 const currentRecord = this.tempAttendanceForDate[studentId] || {};
                 
-                if(currentRecord.status === status && status !== 'present') return; // Permitir marcar presente varias veces
+                if(currentRecord.status === status && status !== 'present') return;
                 
                 currentRecord.status = status;
                 
@@ -776,7 +884,160 @@
                 this.renderStudents();
             },
             
-            // Lógica de Reportes PDF
+            // Lógica de Reportes
+            showHtmlReport(groupId) {
+                this.currentGroupId = groupId;
+                this.renderHtmlReport();
+                this.showView('html-report-view');
+            },
+            renderHtmlReport() {
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                const table = document.getElementById('html-report-table');
+                document.getElementById('html-report-header').textContent = `Reporte: ${group.name}`;
+                table.innerHTML = '';
+                document.getElementById('save-html-report-btn').classList.add('hidden');
+
+                const groupAttendance = this.data.attendance[group.id] || {};
+                const dates = Object.keys(groupAttendance).sort();
+
+                if (dates.length === 0) {
+                    table.innerHTML = '<tr><td class="p-4">No hay registros de asistencia para este grupo.</td></tr>';
+                    return;
+                }
+
+                let thead = '<thead><tr class="bg-gray-100">';
+                thead += '<th class="p-2 border">Estudiante</th>';
+                dates.forEach(date => {
+                    thead += `<th class="p-2 border">${date}</th>`;
+                });
+                thead += '</tr></thead>';
+
+                let tbody = '<tbody>';
+                group.students.forEach(student => {
+                    tbody += `<tr class="border-b">`;
+                    tbody += `<td class="p-2 border font-semibold">${student.name}</td>`;
+                    dates.forEach(date => {
+                        const record = groupAttendance[date][student.id];
+                        let statusIcon = '';
+                        const currentStatus = record ? record.status : 'present';
+                        switch(currentStatus) {
+                            case 'present': statusIcon = '<i class="fas fa-check-circle status-present"></i>'; break;
+                            case 'late': statusIcon = '<i class="fas fa-clock status-late"></i>'; break;
+                            case 'absent': statusIcon = '<i class="fas fa-times-circle status-absent"></i>'; break;
+                            case 'justified': statusIcon = '<i class="fas fa-file-medical status-justified"></i>'; break;
+                            default: statusIcon = '<i class="fas fa-check-circle status-present"></i>';
+                        }
+                        tbody += `<td class="p-2 border text-xl status-cell" data-student-id="${student.id}" data-date="${date}">${statusIcon}</td>`;
+                    });
+                    tbody += `</tr>`;
+                });
+                tbody += '</tbody>';
+
+                table.innerHTML = thead + tbody;
+            },
+            handleReportCellClick(cell) {
+                const studentId = cell.dataset.studentId;
+                const date = cell.dataset.date;
+                const statuses = ['present', 'late', 'absent', 'justified'];
+                const statusIcons = {
+                    present: '<i class="fas fa-check-circle status-present"></i>',
+                    late: '<i class="fas fa-clock status-late"></i>',
+                    absent: '<i class="fas fa-times-circle status-absent"></i>',
+                    justified: '<i class="fas fa-file-medical status-justified"></i>'
+                };
+
+                if (!this.data.attendance[this.currentGroupId]) this.data.attendance[this.currentGroupId] = {};
+                if (!this.data.attendance[this.currentGroupId][date]) this.data.attendance[this.currentGroupId][date] = {};
+                
+                const currentRecord = this.data.attendance[this.currentGroupId][date][studentId] || { status: 'present' };
+                const currentIndex = statuses.indexOf(currentRecord.status);
+                const nextIndex = (currentIndex + 1) % statuses.length;
+                const newStatus = statuses[nextIndex];
+
+                if (!this.data.attendance[this.currentGroupId][date][studentId]) {
+                    this.data.attendance[this.currentGroupId][date][studentId] = {};
+                }
+                this.data.attendance[this.currentGroupId][date][studentId].status = newStatus;
+                
+                cell.innerHTML = statusIcons[newStatus];
+                
+                document.getElementById('save-html-report-btn').classList.remove('hidden');
+            },
+            saveReportChanges() {
+                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+                this.showToast('Reporte actualizado correctamente');
+                document.getElementById('save-html-report-btn').classList.add('hidden');
+            },
+            showStatistics(groupId) {
+                this.currentGroupId = groupId;
+                this.renderStatistics();
+                this.showView('statistics-view');
+            },
+            renderStatistics() {
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+                document.getElementById('stats-header').textContent = `Estadísticas: ${group.name}`;
+                document.getElementById('stats-group-name').textContent = group.name;
+
+                const groupAttendance = this.data.attendance[group.id] || {};
+                const stats = { present: 0, late: 0, absent: 0, justified: 0 };
+                
+                const dates = Object.keys(groupAttendance);
+                const totalPossibleRecords = dates.length * group.students.length;
+
+                dates.forEach(date => {
+                    const dailyRecords = groupAttendance[date];
+                    // Asegurar que todos los estudiantes del día sean contados
+                    group.students.forEach(student => {
+                        const record = dailyRecords[student.id];
+                        const status = record ? record.status : 'present';
+                        stats[status]++;
+                    });
+                });
+
+                if (this.statsChart) {
+                    this.statsChart.destroy();
+                }
+
+                const ctx = document.getElementById('stats-chart-canvas').getContext('2d');
+                this.statsChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Asistió', 'Tardanza', 'Faltó', 'F. Justificada'],
+                        datasets: [{
+                            label: 'Resumen de Asistencia',
+                            data: [stats.present, stats.late, stats.absent, stats.justified],
+                            backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#6366F1'],
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: true }
+                });
+
+                const summaryDiv = document.getElementById('stats-summary');
+                const total = totalPossibleRecords;
+                summaryDiv.innerHTML = `
+                    <p class="text-lg"><i class="fas fa-check-circle status-present"></i> Asistió: <strong>${stats.present}</strong> (${total > 0 ? (stats.present/total*100).toFixed(1) : 0}%)</p>
+                    <p class="text-lg"><i class="fas fa-clock status-late"></i> Tardanza: <strong>${stats.late}</strong> (${total > 0 ? (stats.late/total*100).toFixed(1) : 0}%)</p>
+                    <p class="text-lg"><i class="fas fa-times-circle status-absent"></i> Faltó: <strong>${stats.absent}</strong> (${total > 0 ? (stats.absent/total*100).toFixed(1) : 0}%)</p>
+                    <p class="text-lg"><i class="fas fa-file-medical status-justified"></i> F. Justificada: <strong>${stats.justified}</strong> (${total > 0 ? (stats.justified/total*100).toFixed(1) : 0}%)</p>
+                    <hr class="my-2 border-gray-300">
+                    <p class="text-xl font-bold">Total de registros posibles: <strong>${total}</strong></p>
+                `;
+            },
+            exportStatsToPdf() {
+                const statsContainer = document.getElementById('stats-container');
+                const group = this.data.groups.find(g => g.id === this.currentGroupId);
+
+                html2canvas(statsContainer).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.setFontSize(18);
+                    doc.text(`Estadísticas para ${group.name}`, 10, 15);
+                    doc.addImage(imgData, 'PNG', 10, 25, 190, 0);
+                    doc.save(`estadisticas_${group.name.replace(/\s/g, '_')}.pdf`);
+                });
+            },
             async generatePDF(reportType, options = {}) {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF({ orientation: 'landscape' });
@@ -848,7 +1109,7 @@
                 }
                 
                 if (body.length === 0) {
-                    alert('No hay datos para generar este reporte.');
+                    alert('No hay datos para generar este reporte PDF.');
                     return;
                 }
 
@@ -1030,9 +1291,7 @@
             checkAutoBackup() {
                 if(!this.data.config) return; // Compatibility for old versions
                 const { backupFrequency, lastBackup } = this.data.config;
-                if(backupFrequency === 'none') return;
-                
-                if(!lastBackup) { this.createBackup(); return; }
+                if(backupFrequency === 'none' || !lastBackup) return;
                 
                 const lastBackupDate = new Date(lastBackup);
                 const now = new Date();
