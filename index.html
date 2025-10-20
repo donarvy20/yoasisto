@@ -570,7 +570,7 @@
                             </div>
                             <span class="font-semibold text-lg">${student.name}</span>
                         </div>
-                        <div class="flex items-center gap-2 md:gap-3 text-3xl">
+                        <div class="flex items-center justify-end flex-wrap gap-2 text-3xl">
                            <button data-student-id="${student.id}" data-status="present" class="status-btn status-icon ${studentStatus === 'present' ? 'selected status-present' : 'text-gray-300'}"><i class="fas fa-check-circle"></i></button>
                            <button data-student-id="${student.id}" data-status="late" class="status-btn status-icon ${studentStatus === 'late' ? 'selected status-late' : 'text-gray-300'}"><i class="fas fa-clock"></i></button>
                            <button data-student-id="${student.id}" data-status="absent" class="status-btn status-icon ${studentStatus === 'absent' ? 'selected status-absent' : 'text-gray-300'}"><i class="fas fa-times-circle"></i></button>
