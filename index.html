@@ -527,11 +527,11 @@
                     const groupElement = document.createElement('div');
                     groupElement.className = 'bg-white p-4 rounded-xl shadow-md flex items-center justify-between';
                     groupElement.innerHTML = `
-                        <div>
+                        <div class="flex-grow">
                             <h3 class="text-xl font-bold text-gray-800">${group.name}</h3>
                             <p class="text-gray-500">${group.students.length} alumnos</p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center flex-wrap justify-end gap-3">
                             <button data-group-id="${group.id}" title="Duplicar Grupo" class="duplicate-group-btn text-blue-500 text-xl"><i class="fas fa-copy"></i></button>
                             <button data-group-id="${group.id}" title="Ver Reporte HTML" class="view-html-report-btn text-green-500 text-xl"><i class="fas fa-file-alt"></i></button>
                             <button data-group-id="${group.id}" title="Ver Estadísticas" class="view-stats-btn text-indigo-500 text-xl"><i class="fas fa-chart-bar"></i></button>
@@ -728,7 +728,13 @@
                 document.getElementById('html-report-table').addEventListener('click', e => {
                     const cell = e.target.closest('.status-cell');
                     if (cell) {
-                        this.handleReportCellClick(cell);
+                         const commentIcon = e.target.closest('.report-comment-icon');
+                        if (commentIcon) {
+                            e.stopPropagation();
+                            this.showToast(commentIcon.getAttribute('title'));
+                        } else {
+                            this.handleReportCellClick(cell);
+                        }
                     }
                 });
                 
@@ -973,7 +979,13 @@
                     dates.forEach(date => {
                         const record = groupAttendance[date][student.id];
                         let statusIcon = '';
+                        let commentIcon = '';
                         const currentStatus = record ? record.status : 'present';
+                        
+                        if (record && record.comment) {
+                            commentIcon = ` <i class="fas fa-comment-alt text-xs text-blue-400 cursor-pointer report-comment-icon" title="${record.comment}"></i>`;
+                        }
+
                         switch(currentStatus) {
                             case 'present': statusIcon = '<i class="fas fa-check-circle status-present"></i>'; break;
                             case 'late': statusIcon = '<i class="fas fa-clock status-late"></i>'; break;
@@ -981,7 +993,7 @@
                             case 'justified': statusIcon = '<i class="fas fa-file-medical status-justified"></i>'; break;
                             default: statusIcon = '<i class="fas fa-check-circle status-present"></i>';
                         }
-                        tbody += `<td class="p-2 border text-xl status-cell" data-student-id="${student.id}" data-date="${date}">${statusIcon}</td>`;
+                        tbody += `<td class="p-2 border text-xl status-cell" data-student-id="${student.id}" data-date="${date}">${statusIcon}${commentIcon}</td>`;
                     });
                     tbody += `</tr>`;
                 });
@@ -1013,7 +1025,12 @@
                 }
                 this.data.attendance[this.currentGroupId][date][studentId].status = newStatus;
                 
-                cell.innerHTML = statusIcons[newStatus];
+                let commentIcon = '';
+                if (currentRecord.comment) {
+                     commentIcon = ` <i class="fas fa-comment-alt text-xs text-blue-400 cursor-pointer report-comment-icon" title="${currentRecord.comment}"></i>`;
+                }
+
+                cell.innerHTML = statusIcons[newStatus] + commentIcon;
                 
                 document.getElementById('save-html-report-btn').classList.remove('hidden');
             },
