@@ -96,6 +96,33 @@
              z-index: 20;
          }
 
+        /* Estilos responsivos para pantallas pequeñas */
+        @media (max-width: 420px) {
+            h1.text-xl {
+                font-size: 1.125rem; /* Reduce font size of main headers */
+            }
+            .text-3xl {
+                font-size: 1.5rem; /* Reduce size of attendance icons */
+            }
+            .text-2xl {
+                 font-size: 1.25rem;
+            }
+            .text-lg {
+                font-size: 1rem; /* Reduce size of student names */
+            }
+            .text-sm {
+                font-size: 0.8rem;
+            }
+            .gap-3 {
+                gap: 0.5rem; /* Reduce space between icons */
+            }
+            .gap-4 {
+                gap: 0.75rem; /* Reduce space in headers */
+            }
+            .p-4 {
+                padding: 0.75rem; /* Reduce main padding */
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
