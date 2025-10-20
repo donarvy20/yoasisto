@@ -983,7 +983,7 @@
                         const currentStatus = record ? record.status : 'present';
                         
                         if (record && record.comment) {
-                            commentIcon = ` <i class="fas fa-comment-alt text-sm text-blue-400 cursor-pointer report-comment-icon" title="${record.comment}"></i>`;
+                            commentIcon = ` <i class="fas fa-comment-alt text-xl text-blue-400 cursor-pointer report-comment-icon" title="${record.comment}"></i>`;
                         }
 
                         switch(currentStatus) {
@@ -1027,7 +1027,7 @@
                 
                 let commentIcon = '';
                 if (currentRecord.comment) {
-                     commentIcon = ` <i class="fas fa-comment-alt text-sm text-blue-400 cursor-pointer report-comment-icon" title="${currentRecord.comment}"></i>`;
+                     commentIcon = ` <i class="fas fa-comment-alt text-xl text-blue-400 cursor-pointer report-comment-icon" title="${currentRecord.comment}"></i>`;
                 }
 
                 cell.innerHTML = statusIcons[newStatus] + commentIcon;
