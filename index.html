@@ -23,8 +23,8 @@
             -webkit-tap-highlight-color: transparent; /* Evita el destello azul al tocar en móviles */
         }
         .main-container {
-            max-width: 600px;
-            margin: 0 auto;
+            /* max-width: 600px; */ /* Eliminado para ancho flexible */
+            /* margin: 0 auto; */ /* Eliminado para ancho flexible */
         }
         /* Clases para ocultar/mostrar vistas */
         .hidden-view {
@@ -332,6 +332,28 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal Selector de Reporte Consolidado -->
+    <div id="consolidated-report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Reporte General Consolidado</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="consolidated-report-start-date" class="block text-gray-700 mb-1">Desde</label>
+                    <input type="date" id="consolidated-report-start-date" class="w-full border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="consolidated-report-end-date" class="block text-gray-700 mb-1">Hasta</label>
+                    <input type="date" id="consolidated-report-end-date" class="w-full border-gray-300 rounded-lg p-2">
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Dejar las fechas en blanco para incluir todos los registros.</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-consolidated-report-modal" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="generate-consolidated-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Generar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de Compartir -->
     <div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
@@ -635,6 +657,8 @@
                            this.openStudentReportModal();
                         } else if(reportType === 'share-picker') {
                            this.openShareModal();
+                        } else if (reportType === 'consolidated-general') {
+                           this.openConsolidatedReportModal();
                         } else {
                            this.generatePDF(reportType);
                         }
@@ -650,6 +674,9 @@
                 document.getElementById('cancel-student-report-modal').addEventListener('click', () => this.closeModal('student-report-modal'));
                 document.getElementById('generate-student-report-btn').addEventListener('click', () => this.generateStudentPDFReport());
                 
+                document.getElementById('cancel-consolidated-report-modal').addEventListener('click', () => this.closeModal('consolidated-report-modal'));
+                document.getElementById('generate-consolidated-report-btn').addEventListener('click', () => this.generateConsolidatedPDFReport());
+
                 document.getElementById('cancel-share-modal').addEventListener('click', () => this.closeModal('share-modal'));
                 document.getElementById('send-whatsapp-btn').addEventListener('click', () => this.shareViaWhatsApp());
 
@@ -1069,12 +1096,17 @@
                         break;
                     
                     case 'consolidated-general':
-                        reportTitle = 'Resumen General Consolidado (Todas las Fechas)';
+                        reportTitle = 'Resumen General Consolidado';
+                         if(options.startDate && options.endDate) {
+                            reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
+                        }
                         Object.keys(allAttendance).sort().forEach(date => {
-                            group.students.forEach(student => {
-                                const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
-                                body.push([student.name, date, this.statusMap[record.status], record.comment || '']);
-                            });
+                             if ((!options.startDate || date >= options.startDate) && (!options.endDate || date <= options.endDate)) {
+                                group.students.forEach(student => {
+                                    const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
+                                    body.push([student.name, date, this.statusMap[record.status], record.comment || '']);
+                                });
+                            }
                         });
                         break;
                         
@@ -1119,6 +1151,7 @@
                 
                 doc.save(`reporte_${group.name.replace(/\s/g, '_')}.pdf`);
                 this.closeModal('report-modal');
+                this.closeModal('consolidated-report-modal');
             },
 
             openStudentReportModal(){
@@ -1127,6 +1160,11 @@
                 document.getElementById('student-report-start-date').value = '';
                 document.getElementById('student-report-end-date').value = '';
                 this.openModal('student-report-modal');
+            },
+            openConsolidatedReportModal(){
+                document.getElementById('consolidated-report-start-date').value = '';
+                document.getElementById('consolidated-report-end-date').value = '';
+                this.openModal('consolidated-report-modal');
             },
 
             generateStudentPDFReport() {
@@ -1140,6 +1178,12 @@
                 }
                 this.generatePDF('student', { studentId, startDate, endDate });
                 this.closeModal('student-report-modal');
+            },
+
+             generateConsolidatedPDFReport() {
+                const startDate = document.getElementById('consolidated-report-start-date').value;
+                const endDate = document.getElementById('consolidated-report-end-date').value;
+                this.generatePDF('consolidated-general', { startDate, endDate });
             },
             
             // Lógica de Compartir
