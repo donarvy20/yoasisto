@@ -1167,9 +1167,7 @@
 
                         */
 
-
-
-                       case 'consolidated-general':
+case 'consolidated-general':
                         reportTitle = 'Resumen General Consolidado';
                         if(options.startDate && options.endDate) {
                             reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
@@ -1205,7 +1203,7 @@
                                 const symbol = statusSymbols[record.status];
                                 const hasComment = record.comment && record.comment.trim() !== '';
                                 // Si hay comentario, agregar un pequeño indicador
-                                row.push(hasComment ? `${symbol} 💬` : symbol);
+                                row.push(hasComment ? `${symbol} (*)` : symbol);
                             });
                             consolidatedBody.push(row);
                         });
@@ -1215,28 +1213,33 @@
                         
                         // Leyenda de símbolos
                         doc.setFontSize(9);
-                        doc.text('A = Asistió  |  T = Tardanza  |  F = Faltó  |  FJ = F. Justificada  |  💬 = Tiene comentario', 14, 52);
+                        doc.text('A = Asistió  |  T = Tardanza  |  F = Faltó  |  FJ = F. Justificada  |  (*) = Tiene comentario', 14, 52);
                         
                         doc.autoTable({ 
                             head: consolidatedHead, 
                             body: consolidatedBody, 
                             startY: 56, 
                             theme: 'grid',
-                            styles: { fontSize: 8, cellPadding: 2 },
-                            headStyles: { fillColor: [22, 160, 133], halign: 'center' },
-                            columnStyles: { 0: { cellWidth: 40, fontStyle: 'bold' } },
-                            didDrawCell: function(data) {
-                                // Colorear las celdas según el estado
+                            styles: { fontSize: 8, cellPadding: 2, halign: 'center' },
+                            headStyles: { fillColor: [22, 160, 133], halign: 'center', fontStyle: 'bold' },
+                            columnStyles: { 0: { cellWidth: 40, fontStyle: 'bold', halign: 'left' } },
+                            willDrawCell: function(data) {
+                                // Aplicar estilos según el estado ANTES de dibujar
                                 if (data.section === 'body' && data.column.index > 0) {
-                                    const cellText = data.cell.text[0];
-                                    if (cellText.includes('A')) {
-                                        doc.setTextColor(16, 185, 129); // Verde
-                                    } else if (cellText.includes('T')) {
-                                        doc.setTextColor(245, 158, 11); // Ámbar
-                                    } else if (cellText.includes('FJ')) {
-                                        doc.setTextColor(99, 102, 241); // Índigo
-                                    } else if (cellText.includes('F')) {
-                                        doc.setTextColor(239, 68, 68); // Rojo
+                                    const cellText = data.cell.text[0] || '';
+                                    // IMPORTANTE: Verificar FJ primero, antes que F solo
+                                    if (cellText.startsWith('FJ')) {
+                                        data.cell.styles.textColor = [239, 68, 68]; // Rojo
+                                        data.cell.styles.fontStyle = 'bold';
+                                    } else if (cellText.startsWith('F')) {
+                                        data.cell.styles.textColor = [239, 68, 68]; // Rojo
+                                        data.cell.styles.fontStyle = 'bold';
+                                    } else if (cellText.startsWith('T')) {
+                                        data.cell.styles.textColor = [255, 140, 0]; // Naranja
+                                        data.cell.styles.fontStyle = 'bold';
+                                    } else if (cellText.startsWith('A')) {
+                                        data.cell.styles.textColor = [16, 185, 129]; // Verde
+                                        data.cell.styles.fontStyle = 'normal';
                                     }
                                 }
                             }
@@ -1247,6 +1250,7 @@
                         this.closeModal('consolidated-report-modal');
                         return; // Retornar temprano para este tipo de reporte
 
+                       
 
 
                         
@@ -1530,6 +1534,7 @@
     </script>
 </body>
 </html>
+
 
 
 
