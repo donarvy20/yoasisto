@@ -1138,8 +1138,19 @@
                             body.push([student.name, this.currentDate, this.statusMap[record.status], record.comment || '']);
                         });
                         break;
-                    
-                    case 'consolidated-general':
+
+
+
+
+
+
+
+
+
+
+
+                        
+                /*    case 'consolidated-general':
                         reportTitle = 'Resumen General Consolidado';
                          if(options.startDate && options.endDate) {
                             reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
@@ -1153,6 +1164,104 @@
                             }
                         });
                         break;
+
+                        */
+
+case 'consolidated-general':
+    reportTitle = 'Resumen General Consolidado';
+    if(options.startDate && options.endDate) {
+        reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
+    }
+    
+    // Obtener fechas filtradas y ordenadas
+    const filteredDates = Object.keys(allAttendance)
+        .filter(date => (!options.startDate || date >= options.startDate) && (!options.endDate || date <= options.endDate))
+        .sort();
+    
+    if (filteredDates.length === 0) {
+        alert('No hay registros en el rango de fechas seleccionado.');
+        return;
+    }
+
+    // Crear encabezados con las fechas
+    const consolidatedHead = [['Estudiante', ...filteredDates]];
+    const consolidatedBody = [];
+    
+    // Símbolos para el estado
+    const statusSymbols = {
+        present: '✓',
+        late: '◐',
+        absent: '✗',
+        justified: 'J'
+    };
+
+    // Crear una fila por estudiante
+    group.students.forEach(student => {
+        const row = [student.name];
+        filteredDates.forEach(date => {
+            const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
+            const symbol = statusSymbols[record.status];
+            const hasComment = record.comment && record.comment.trim() !== '';
+            // Si hay comentario, agregar un pequeño indicador
+            row.push(hasComment ? `${symbol} 💬` : symbol);
+        });
+        consolidatedBody.push(row);
+    });
+
+    doc.setFontSize(14);
+    doc.text(reportTitle, 14, 46);
+    
+    // Leyenda de símbolos
+    doc.setFontSize(9);
+    doc.text('✓ = Asistió  |  ◐ = Tardanza  |  ✗ = Faltó  |  J = F. Justificada  |  💬 = Tiene comentario', 14, 52);
+    
+    doc.autoTable({ 
+        head: consolidatedHead, 
+        body: consolidatedBody, 
+        startY: 56, 
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [22, 160, 133], halign: 'center' },
+        columnStyles: { 0: { cellWidth: 40, fontStyle: 'bold' } },
+        didDrawCell: function(data) {
+            // Colorear las celdas según el estado
+            if (data.section === 'body' && data.column.index > 0) {
+                const cellText = data.cell.text[0];
+                if (cellText.includes('✓')) {
+                    doc.setTextColor(16, 185, 129); // Verde
+                } else if (cellText.includes('◐')) {
+                    doc.setTextColor(245, 158, 11); // Ámbar
+                } else if (cellText.includes('✗')) {
+                    doc.setTextColor(239, 68, 68); // Rojo
+                } else if (cellText.includes('J')) {
+                    doc.setTextColor(99, 102, 241); // Índigo
+                }
+            }
+        }
+    });
+    
+    doc.save(`reporte_consolidado_${group.name.replace(/\s/g, '_')}.pdf`);
+    this.closeModal('report-modal');
+    this.closeModal('consolidated-report-modal');
+    return; // Retornar temprano para este tipo de reporte
+
+
+
+
+                        
+
+
+
+
+
+
+
+
+
+
+
+
+                        
                         
                     case 'student':
                         const student = group.students.find(s => s.id === options.studentId);
@@ -1420,6 +1529,7 @@
     </script>
 </body>
 </html>
+
 
 
 
