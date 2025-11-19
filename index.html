@@ -1201,9 +1201,9 @@ case 'consolidated-general':
                             filteredDates.forEach(date => {
                                 const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
                                 const symbol = statusSymbols[record.status];
-                                const hasComment = record.comment && record.comment.trim() !== '';
-                                // Si hay comentario, agregar un pequeño indicador
-                                row.push(hasComment ? `${symbol} (*)` : symbol);
+                                const comment = record.comment && record.comment.trim() !== '' ? record.comment.trim() : '';
+                                // Si hay comentario, mostrarlo debajo del símbolo
+                                row.push(comment ? `${symbol}\n${comment}` : symbol);
                             });
                             consolidatedBody.push(row);
                         });
@@ -1213,33 +1213,52 @@ case 'consolidated-general':
                         
                         // Leyenda de símbolos
                         doc.setFontSize(9);
-                        doc.text('A = Asistió  |  T = Tardanza  |  F = Faltó  |  FJ = F. Justificada  |  (*) = Tiene comentario', 14, 52);
+                        doc.text('A = Asistió  |  T = Tardanza  |  F = Faltó  |  FJ = F. Justificada', 14, 52);
                         
                         doc.autoTable({ 
                             head: consolidatedHead, 
                             body: consolidatedBody, 
                             startY: 56, 
                             theme: 'grid',
-                            styles: { fontSize: 8, cellPadding: 2, halign: 'center' },
-                            headStyles: { fillColor: [22, 160, 133], halign: 'center', fontStyle: 'bold' },
-                            columnStyles: { 0: { cellWidth: 40, fontStyle: 'bold', halign: 'left' } },
-                            willDrawCell: function(data) {
-                                // Aplicar estilos según el estado ANTES de dibujar
+                            styles: { 
+                                fontSize: 8, 
+                                cellPadding: 2, 
+                                halign: 'center', 
+                                valign: 'middle',
+                                cellWidth: 'wrap'
+                            },
+                            headStyles: { 
+                                fillColor: [22, 160, 133], 
+                                halign: 'center', 
+                                fontStyle: 'bold' 
+                            },
+                            columnStyles: { 
+                                0: { cellWidth: 40, fontStyle: 'bold', halign: 'left' } 
+                            },
+                            didParseCell: function(data) {
+                                // Aplicar estilos al analizar las celdas
                                 if (data.section === 'body' && data.column.index > 0) {
-                                    const cellText = data.cell.text[0] || '';
-                                    // IMPORTANTE: Verificar FJ primero, antes que F solo
-                                    if (cellText.startsWith('FJ')) {
-                                        data.cell.styles.textColor = [239, 68, 68]; // Rojo
-                                        data.cell.styles.fontStyle = 'bold';
-                                    } else if (cellText.startsWith('F')) {
-                                        data.cell.styles.textColor = [239, 68, 68]; // Rojo
-                                        data.cell.styles.fontStyle = 'bold';
-                                    } else if (cellText.startsWith('T')) {
-                                        data.cell.styles.textColor = [255, 140, 0]; // Naranja
-                                        data.cell.styles.fontStyle = 'bold';
-                                    } else if (cellText.startsWith('A')) {
-                                        data.cell.styles.textColor = [16, 185, 129]; // Verde
-                                        data.cell.styles.fontStyle = 'normal';
+                                    const cellRaw = data.cell.raw;
+                                    if (typeof cellRaw === 'string') {
+                                        const firstChar = cellRaw.substring(0, 2);
+                                        
+                                        if (firstChar === 'FJ') {
+                                            data.cell.styles.textColor = [239, 68, 68]; // Rojo
+                                            data.cell.styles.fontStyle = 'bold';
+                                        } else if (cellRaw.startsWith('F')) {
+                                            data.cell.styles.textColor = [239, 68, 68]; // Rojo
+                                            data.cell.styles.fontStyle = 'bold';
+                                        } else if (cellRaw.startsWith('T')) {
+                                            data.cell.styles.textColor = [255, 140, 0]; // Naranja
+                                            data.cell.styles.fontStyle = 'bold';
+                                        } else if (cellRaw.startsWith('A')) {
+                                            data.cell.styles.textColor = [16, 185, 129]; // Verde
+                                        }
+                                        
+                                        // Ajustar tamaño si tiene comentario (contiene salto de línea)
+                                        if (cellRaw.includes('\n')) {
+                                            data.cell.styles.fontSize = 7;
+                                        }
                                     }
                                 }
                             }
@@ -1249,7 +1268,6 @@ case 'consolidated-general':
                         this.closeModal('report-modal');
                         this.closeModal('consolidated-report-modal');
                         return; // Retornar temprano para este tipo de reporte
-
                         
 
 
@@ -1531,6 +1549,7 @@ case 'consolidated-general':
     </script>
 </body>
 </html>
+
 
 
 
