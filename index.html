@@ -1264,7 +1264,7 @@ case 'consolidated-general':
                             }
                         });
                         
-                        doc.save(`reporte_consolidado_${group.name.replace(/\s/g, '_')}.pdf`);
+                        doc.save(`reporte_${group.name.replace(/\s/g, '_')}.pdf`);
                         this.closeModal('report-modal');
                         this.closeModal('consolidated-report-modal');
                         return; // Retornar temprano para este tipo de reporte
@@ -1549,6 +1549,7 @@ case 'consolidated-general':
     </script>
 </body>
 </html>
+
 
 
 
