@@ -1167,7 +1167,7 @@
 
                         */
 
-case 'consolidated-general':
+/*case 'consolidated-general':
                         reportTitle = 'Resumen General Consolidado';
                         if(options.startDate && options.endDate) {
                             reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
@@ -1267,10 +1267,123 @@ case 'consolidated-general':
                         doc.save(`reporte_${group.name.replace(/\s/g, '_')}.pdf`);
                         this.closeModal('report-modal');
                         this.closeModal('consolidated-report-modal');
-                        return; // Retornar temprano para este tipo de reporte
+                        return; // Retornar temprano para este tipo de reporte*/
                         
 
+case 'consolidated-general':
+    reportTitle = 'Resumen General Consolidado';
+    if(options.startDate && options.endDate) {
+        reportTitle += ` (de ${options.startDate} a ${options.endDate})`;
+    }
 
+    // Filtrar y ordenar fechas
+    const filteredDates = Object.keys(allAttendance)
+        .filter(date => (!options.startDate || date >= options.startDate) && (!options.endDate || date <= options.endDate))
+        .sort();
+
+    if (filteredDates.length === 0) {
+        alert('No hay registros en el rango de fechas seleccionado.');
+        return;
+    }
+
+    // Definir encabezados y cuerpo
+    const consolidatedHead = [['Estudiante', ...filteredDates]];
+    const consolidatedBody = [];
+    const statusSymbols = {
+        present: 'A',
+        late: 'T',
+        absent: 'F',
+        justified: 'FJ'
+    };
+
+    group.students.forEach(student => {
+        const row = [student.name];
+        filteredDates.forEach(date => {
+            const record = allAttendance[date][student.id] || { status: 'present', comment: '' };
+            const symbol = statusSymbols[record.status] || 'A';
+            const comment = (record.comment || '').trim();
+            // Mostrar símbolo y comentario en líneas separadas
+            row.push(comment ? `${symbol}\n${comment}` : symbol);
+        });
+        consolidatedBody.push(row);
+    });
+
+    // Ajustar la configuración del PDF
+    doc.setFontSize(14);
+    doc.text(reportTitle, 14, 46);
+
+    // Leyenda
+    doc.setFontSize(9);
+    doc.text('A = Asistió  |  T = Tardanza  |  F = Faltó  |  FJ = F. Justificada', 14, 52);
+
+    // Establecer ancho fijo para la primera columna y calcular el resto
+    const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+    const margin = 14;
+    const usableWidth = pageWidth - 2 * margin;
+    const firstColumnWidth = 40;
+    const remainingWidth = usableWidth - firstColumnWidth;
+    const dateColumnWidth = Math.min(25, remainingWidth / filteredDates.length); // Limitar el ancho por fecha
+
+    doc.autoTable({
+        head: consolidatedHead,
+        body: consolidatedBody,
+        startY: 56,
+        theme: 'grid',
+        styles: {
+            fontSize: 8,
+            cellPadding: 2,
+            halign: 'center',
+            valign: 'middle',
+            cellWidth: 'wrap', // Permite que el texto se ajuste verticalmente
+            minCellHeight: 12
+        },
+        headStyles: {
+            fillColor: [22, 160, 133],
+            halign: 'center',
+            fontStyle: 'bold'
+        },
+        columnStyles: {
+            0: {
+                cellWidth: firstColumnWidth,
+                fontStyle: 'bold',
+                halign: 'left',
+                minCellHeight: 12
+            }
+        },
+        // Ajustar ancho de columnas de fechas
+        didParseCell: function(data) {
+            if (data.section === 'head' && data.column.index > 0) {
+                data.cell.styles.cellWidth = dateColumnWidth;
+            }
+            if (data.section === 'body' && data.column.index > 0) {
+                data.cell.styles.cellWidth = dateColumnWidth;
+                const cellRaw = data.cell.raw;
+                if (typeof cellRaw === 'string') {
+                    const firstChar = cellRaw.substring(0, 2);
+                    if (firstChar === 'FJ' || cellRaw.startsWith('F')) {
+                        data.cell.styles.textColor = [239, 68, 68];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (cellRaw.startsWith('T')) {
+                        data.cell.styles.textColor = [255, 140, 0];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (cellRaw.startsWith('A')) {
+                        data.cell.styles.textColor = [0, 0, 0];
+                    }
+                }
+            }
+        },
+        // Repetir encabezado en nuevas páginas
+        didDrawPage: function(data) {
+            // Opcional: puedes agregar título o institución en cada página si quieres
+        },
+        // Repetir la columna de nombres en cada página (no soportado directamente por autoTable)
+        // Pero al usar columnas fijas y word-wrap, el contenido se ajusta sin desbordar
+    });
+
+    doc.save(`reporte_consolidado_${group.name.replace(/\s/g, '_')}.pdf`);
+    this.closeModal('report-modal');
+    this.closeModal('consolidated-report-modal');
+    return;
 
 
 
@@ -1549,6 +1662,7 @@ case 'consolidated-general':
     </script>
 </body>
 </html>
+
 
 
 
