@@ -330,21 +330,24 @@
             </div>
 
 
-            <div>
-    <label for="lock-key" class="block text-gray-700 mb-1">Clave para desbloquear asistencia</label>
-    <input type="password" id="lock-key" class="w-full border-gray-300 rounded-lg p-2" placeholder="Ej: 1234">
-</div>
+  
 
             <div class="mt-6">
     <h3 class="text-lg font-semibold border-b pb-2 mb-4">Seguridad</h3>
     <div class="space-y-4">
+
+          <div>
+    <label for="lock-key" class="block text-gray-700 mb-1">Clave para desbloquear asistencia</label>
+    <input type="password" id="lock-key" class="w-full border-gray-300 rounded-lg p-2" placeholder="Ej: 1234">
+</div>
+        
         <div>
             <label for="security-question" class="block text-gray-700 mb-1">Pregunta secreta (para recuperar clave)</label>
             <input type="text" id="security-question" class="w-full border-gray-300 rounded-lg p-2" placeholder="Ej: ¿Nombre de tu primera mascota?">
         </div>
         <div>
             <label for="security-answer" class="block text-gray-700 mb-1">Respuesta secreta</label>
-            <input type="text" id="security-answer" class="w-full border-gray-300 rounded-lg p-2" placeholder="Respuesta (sensible a mayúsculas)">
+            <input type="password" id="security-answer" class="w-full border-gray-300 rounded-lg p-2" placeholder="Respuesta (sensible a mayúsculas)">
         </div>
         <button type="button" id="recover-key-btn" class="text-blue-600 text-sm underline">¿Olvidaste tu clave?</button>
     </div>
@@ -1952,6 +1955,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
