@@ -99,7 +99,7 @@
 
 
 
-        #add-group-btn {
+#add-group-btn {
     position: fixed;
     bottom: 20px;
     left: 50%;
@@ -107,10 +107,17 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
+    background-color: #3B82F6; /* o el color que uses */
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 50;
+    font-size: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000; /* ↑ Asegura que esté por encima de todo */
+    -webkit-tap-highlight-color: transparent; /* evita el flash azul en iOS */
+    touch-action: manipulation; /* mejora la respuesta táctil */
+    cursor: pointer;
 }
 
         
@@ -1955,6 +1962,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
