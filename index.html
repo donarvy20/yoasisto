@@ -894,7 +894,7 @@ document.getElementById('cancel-unlock-modal').addEventListener('click', () => {
                 
 document.getElementById('confirm-unlock-btn').addEventListener('click', () => {
     const password = document.getElementById('unlock-password').value;
-    if (password === '1234') { // ← puedes cambiar esto más adelante por this.data.config.lockKey
+    if (password === (this.data.config.lockKey || '1234')) { // ← puedes cambiar esto más adelante por this.data.config.lockKey
         this.toggleAttendanceLock(false);
         this.closeModal('unlock-modal');
     } else {
@@ -1880,6 +1880,7 @@ this.data.config.lockKey = document.getElementById('lock-key').value.trim() || '
     
 </body>
 </html>
+
 
 
 
