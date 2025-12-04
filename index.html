@@ -189,8 +189,11 @@
                     </div>
                 </div>
                 <div class="flex gap-2 mb-4">
-                     <button id="mark-all-present-btn" class="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-green-600 transition">
+                    <button id="mark-all-present-btn" class="flex-1 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-green-600 transition">
                         <i class="fas fa-check-double"></i> Todos Presentes
+                    </button>
+                    <button id="toggle-lock-btn" class="w-12 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 flex items-center justify-center text-xl">
+                        <i class="fas fa-lock"></i>
                     </button>
                 </div>
                 <div id="student-list" class="space-y-3">
@@ -325,6 +328,13 @@
                     </div>
                 </div>
             </div>
+
+
+            <div>
+    <label for="lock-key" class="block text-gray-700 mb-1">Clave para desbloquear asistencia</label>
+    <input type="password" id="lock-key" class="w-full border-gray-300 rounded-lg p-2" placeholder="Ej: 1234">
+</div>
+            
 
             <div>
                 <h3 class="text-lg font-semibold border-b pb-2 mb-4">Copia de Seguridad</h3>
@@ -470,8 +480,23 @@
                 config: {
                     backupFrequency: 'none',
                     lastBackup: null,
+
+                    
+                    lockKey: '1234' // ← clave por defecto
+
+
+                    
                 }
+                
             },
+
+
+            
+            attendanceLocked: true, // ← estado inicial bloqueado
+
+
+
+            
             currentGroupId: null,
             currentStudentId: null,
             currentDate: new Date().toISOString().slice(0, 10),
@@ -510,6 +535,22 @@
                 this.hasUnsavedChanges = false;
                 document.getElementById('save-attendance-btn').classList.remove('save-pending');
                 this.showToast('Asistencia guardada');
+
+
+
+                 this.hasUnsavedChanges = false;
+    document.getElementById('save-attendance-btn').classList.remove('save-pending');
+    this.showToast('Asistencia guardada');
+
+    // 🔒 Bloquear automáticamente después de guardar
+    this.toggleAttendanceLock(true);
+
+
+
+
+
+
+                
             },
 
             // Navegación entre vistas
@@ -527,6 +568,15 @@
                 document.getElementById('save-attendance-btn').classList.remove('save-pending');
                 this.tempAttendanceForDate = JSON.parse(JSON.stringify(this.data.attendance[this.currentGroupId]?.[this.currentDate] || {}));
                 this.renderStudents();
+
+
+                 // Mantener bloqueado al cambiar de fecha (seguridad)
+    this.toggleAttendanceLock(true);
+
+
+
+
+                
             },
 
             // Lógica de renderizado
@@ -632,6 +682,29 @@
             },
             
             attachEventListeners() {
+
+
+
+                
+
+document.getElementById('toggle-lock-btn').addEventListener('click', () => {
+    if (this.attendanceLocked) {
+        const input = prompt('Ingresa la clave para desbloquear la lista de asistencia:');
+        if (input === this.data.config.lockKey) {
+            this.toggleAttendanceLock(false);
+        } else if (input !== null) {
+            alert('Clave incorrecta.');
+        }
+    } else {
+        this.toggleAttendanceLock(true);
+    }
+});
+
+
+
+
+
+                
                 document.getElementById('add-group-btn').addEventListener('click', () => this.openGroupModal());
                 document.getElementById('cancel-group-modal').addEventListener('click', () => this.closeModal('group-modal'));
                 document.getElementById('save-group-btn').addEventListener('click', () => this.saveGroup());
@@ -1585,10 +1658,20 @@ case 'consolidated-general':
                 document.getElementById('teacher-name').value = userProfile.teacherName || '';
                 document.getElementById('teacher-specialty').value = userProfile.specialty || '';
                 document.getElementById('backup-frequency').value = config.backupFrequency || 'none';
+
+
+                document.getElementById('lock-key').value = this.data.config.lockKey || '1234';
+
+                
                 this.openModal('settings-modal');
             },
 
             saveSettings() {
+                
+
+this.data.config.lockKey = document.getElementById('lock-key').value.trim() || '1234';
+                
+                
                 this.data.userProfile.institution = document.getElementById('institution-name').value.trim();
                 this.data.userProfile.teacherName = document.getElementById('teacher-name').value.trim();
                 this.data.userProfile.specialty = document.getElementById('teacher-specialty').value.trim();
@@ -1678,9 +1761,62 @@ case 'consolidated-general':
         // Iniciar la aplicación
         app.init();
     });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        toggleAttendanceLock(shouldLock = null) {
+    if (shouldLock === null) {
+        // Si no se especifica, alternar
+        this.attendanceLocked = !this.attendanceLocked;
+    } else {
+        this.attendanceLocked = shouldLock;
+    }
+
+    // Actualizar UI
+    const lockIcon = document.querySelector('#toggle-lock-btn i');
+    const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn');
+    const dateInput = document.getElementById('attendance-date');
+
+    if (this.attendanceLocked) {
+        lockIcon.className = 'fas fa-lock';
+        buttons.forEach(btn => btn.disabled = true);
+        dateInput.disabled = true;
+    } else {
+        lockIcon.className = 'fas fa-lock-open';
+        buttons.forEach(btn => btn.disabled = false);
+        dateInput.disabled = false;
+    }
+},
+
+
+
+
+
+
+
+
+
+
+
+        
     </script>
 </body>
 </html>
+
 
 
 
