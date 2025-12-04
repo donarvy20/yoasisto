@@ -545,13 +545,46 @@
     // 🔒 Bloquear automáticamente después de guardar
     this.toggleAttendanceLock(true);
 
-
-
-
-
-
                 
             },
+
+
+  toggleAttendanceLock(shouldLock = null) {
+    if (shouldLock === null) {
+        // Si no se especifica, alternar
+        this.attendanceLocked = !this.attendanceLocked;
+    } else {
+        this.attendanceLocked = shouldLock;
+    }
+
+    // Actualizar UI
+    const lockIcon = document.querySelector('#toggle-lock-btn i');
+    const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn');
+    const dateInput = document.getElementById('attendance-date');
+
+    if (this.attendanceLocked) {
+        lockIcon.className = 'fas fa-lock';
+        buttons.forEach(btn => btn.disabled = true);
+        dateInput.disabled = true;
+    } else {
+        lockIcon.className = 'fas fa-lock-open';
+        buttons.forEach(btn => btn.disabled = false);
+        dateInput.disabled = false;
+    }
+},
+
+
+
+
+
+
+
+
+
+
+
+
+            
 
             // Navegación entre vistas
             showView(viewId) {
@@ -572,8 +605,6 @@
 
                  // Mantener bloqueado al cambiar de fecha (seguridad)
     this.toggleAttendanceLock(true);
-
-
 
 
                 
@@ -682,29 +713,9 @@
             },
             
             attachEventListeners() {
-
-
-
                 
 
-document.getElementById('toggle-lock-btn').addEventListener('click', () => {
-    if (this.attendanceLocked) {
-        const input = prompt('Ingresa la clave para desbloquear la lista de asistencia:');
-        if (input === this.data.config.lockKey) {
-            this.toggleAttendanceLock(false);
-        } else if (input !== null) {
-            alert('Clave incorrecta.');
-        }
-    } else {
-        this.toggleAttendanceLock(true);
-    }
-});
-
-
-
-
-
-                
+             
                 document.getElementById('add-group-btn').addEventListener('click', () => this.openGroupModal());
                 document.getElementById('cancel-group-modal').addEventListener('click', () => this.closeModal('group-modal'));
                 document.getElementById('save-group-btn').addEventListener('click', () => this.saveGroup());
@@ -833,6 +844,35 @@ document.getElementById('toggle-lock-btn').addEventListener('click', () => {
                 // Info Modal
                 document.getElementById('info-btn').addEventListener('click', () => this.openModal('info-modal'));
                 document.getElementById('close-info-modal').addEventListener('click', () => this.closeModal('info-modal'));
+
+
+
+
+document.getElementById('toggle-lock-btn').addEventListener('click', () => {
+    if (this.attendanceLocked) {
+        const input = prompt('Ingresa la clave para desbloquear la lista de asistencia:');
+        if (input === this.data.config.lockKey) {
+            this.toggleAttendanceLock(false);
+        } else if (input !== null) {
+            alert('Clave incorrecta.');
+        }
+    } else {
+        this.toggleAttendanceLock(true);
+    }
+});
+
+
+
+
+
+
+
+
+                
+
+
+
+                
             },
             
             showStudentMenu(studentId, buttonElement) {
@@ -1778,30 +1818,7 @@ this.data.config.lockKey = document.getElementById('lock-key').value.trim() || '
 
 
 
-        toggleAttendanceLock(shouldLock = null) {
-    if (shouldLock === null) {
-        // Si no se especifica, alternar
-        this.attendanceLocked = !this.attendanceLocked;
-    } else {
-        this.attendanceLocked = shouldLock;
-    }
-
-    // Actualizar UI
-    const lockIcon = document.querySelector('#toggle-lock-btn i');
-    const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn');
-    const dateInput = document.getElementById('attendance-date');
-
-    if (this.attendanceLocked) {
-        lockIcon.className = 'fas fa-lock';
-        buttons.forEach(btn => btn.disabled = true);
-        dateInput.disabled = true;
-    } else {
-        lockIcon.className = 'fas fa-lock-open';
-        buttons.forEach(btn => btn.disabled = false);
-        dateInput.disabled = false;
-    }
-},
-
+      
 
 
 
@@ -1816,6 +1833,7 @@ this.data.config.lockKey = document.getElementById('lock-key').value.trim() || '
     </script>
 </body>
 </html>
+
 
 
 
