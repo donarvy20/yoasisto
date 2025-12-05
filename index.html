@@ -90,10 +90,10 @@
             position: sticky;
             left: 0;
             background-color: white;
-            z-index: 0;
+            z-index: 10;
         }
          .report-table th:first-child {
-             z-index: 0;
+             z-index: 20;
                
          }
 
@@ -132,8 +132,12 @@
         }
 
 
-        
+#unlock-modal {
+    z-index: 1000 !important; /* Asegura que el modal esté encima de todo */
+} 
 
+
+        
 #add-group-btn {
     bottom: 40px;
     position:fixed;
@@ -2140,6 +2144,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
