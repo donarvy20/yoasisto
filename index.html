@@ -791,17 +791,7 @@ document.getElementById('recover-key-btn').addEventListener('click', () => {
 });
               
              
-               /* document.getElementById('add-group-btn').addEventListener('click', () => this.openGroupModal());*/
-
-const addGroupBtn = document.getElementById('add-group-btn');
-addGroupBtn.addEventListener('click', () => this.openGroupModal());
-addGroupBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    this.openGroupModal();
-}, { passive: false });
-
-
-
+                document.getElementById('add-group-btn').addEventListener('click', () => this.openGroupModal());
 
 
                 
@@ -1973,6 +1963,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
