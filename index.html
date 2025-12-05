@@ -804,6 +804,25 @@ right: 42%;
 
 
 
+                document.getElementById('toggle-report-lock-btn').addEventListener('click', () => {
+    if (this.reportLocked) {
+        // Abrir candado: pedir clave
+        document.getElementById('unlock-password').value = '';
+        this.openModal('unlock-modal');
+        // Guardar contexto: para saber que es el reporte, no la asistencia
+        this.unlockContext = 'report';
+    } else {
+        // Cerrar candado
+        this.toggleReportLock(true);
+    }
+});
+
+
+
+
+
+                
+
 
                 
                     if (this.reportLocked) {
@@ -2105,6 +2124,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
