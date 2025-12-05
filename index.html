@@ -222,15 +222,24 @@ right: 42%;
 
         <!-- Vista 3: Reporte HTML -->
         <div id="html-report-view" class="hidden-view">
-            <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
-                <button id="back-to-groups-from-report-btn" class="text-2xl"><i class="fas fa-arrow-left"></i></button>
-                <h1 id="html-report-header" class="text-xl font-bold">Reporte General</h1>
-              
-                <button id="toggle-report-lock-btn" class="text-2xl"><i class="fas fa-lock"></i></button>
 
-                
-                <button id="save-html-report-btn" class="text-2xl hidden"><i class="fas fa-save text-amber-400"></i></button>
-            </header>
+
+
+
+            
+<header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
+    <button id="back-to-groups-from-report-btn" class="text-2xl"><i class="fas fa-arrow-left"></i></button>
+    <h1 id="html-report-header" class="text-xl font-bold">Reporte General</h1>
+    <div class="flex items-center gap-4">
+        <button id="toggle-report-lock-btn" class="text-2xl"><i class="fas fa-lock"></i></button>
+        <button id="save-html-report-btn" class="text-2xl hidden"><i class="fas fa-save text-amber-400"></i></button>
+    </div>
+</header>
+
+
+
+
+         
             <main class="p-4">
                 <div class="w-full overflow-x-auto border border-gray-200 rounded-lg">
                     <table id="html-report-table" class="w-full text-sm report-table">
@@ -680,6 +689,12 @@ right: 42%;
                 document.getElementById('html-report-view').classList.add('hidden-view');
                 document.getElementById('statistics-view').classList.add('hidden-view');
                 document.getElementById(viewId).classList.remove('hidden-view');
+
+
+                 // Bloquear reporte si se sale de él
+    if (viewId !== 'html-report-view') {
+        this.reportLocked = true;
+    }
             },
             
             // Carga la asistencia temporal al cambiar de vista o fecha
@@ -801,29 +816,6 @@ right: 42%;
             
             attachEventListeners() {
                 
-
-
-
-                document.getElementById('toggle-report-lock-btn').addEventListener('click', () => {
-    if (this.reportLocked) {
-        // Abrir candado: pedir clave
-        document.getElementById('unlock-password').value = '';
-        this.openModal('unlock-modal');
-        // Guardar contexto: para saber que es el reporte, no la asistencia
-        this.unlockContext = 'report';
-    } else {
-        // Cerrar candado
-        this.toggleReportLock(true);
-    }
-});
-
-
-
-
-
-                
-
-
                 
                     if (this.reportLocked) {
         // Abrir candado: pedir clave
@@ -1075,6 +1067,26 @@ document.getElementById('unlock-password').addEventListener('keypress', (e) => {
                 
 
 
+
+
+// Candado del reporte HTML
+document.getElementById('toggle-report-lock-btn').addEventListener('click', () => {
+    if (this.reportLocked) {
+        // Pedir clave para abrir
+        document.getElementById('unlock-password').value = '';
+        this.openModal('unlock-modal');
+        // Guardar contexto: reporte
+        this.unlockContext = 'report';
+    } else {
+        // Cerrar candado
+        this.toggleReportLock(true);
+    }
+});
+
+
+
+
+                
 
                 
             },
@@ -1352,6 +1364,12 @@ document.getElementById('unlock-password').addEventListener('keypress', (e) => {
 
                 table.innerHTML = thead + tbody;
             },
+
+
+
+
+
+            
             handleReportCellClick(cell) {
 
 
@@ -2124,6 +2142,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
