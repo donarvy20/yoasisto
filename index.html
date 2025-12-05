@@ -129,14 +129,13 @@
                 padding: 0.75rem; /* Reduce main padding */
             }
         }
-/*
+
 #add-group-btn {
     position:fixed;
-    bottom: 30px;        
-    left: 50%;          
- transform: translateX(-50%);
+    bottom: 40px;        
 }
-
+        
+/*
 #add-group-btn .icon-wrapper {
     display: flex;
     align-items: center;
@@ -149,49 +148,6 @@
 */
 
 
-
-
-#add-group-btn {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #3B82F6;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
-    z-index: 100;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    cursor: pointer;
-    /* 👇 Clave: asegura que el área táctil sea completa */
-    padding: 0;
-    margin: 0;
-    border: none;
-    outline: none;
-     outline: 20px solid red;
-}
-
-#add-group-btn .add-icon {
-    font-family: Arial, sans-serif;
-    font-weight: bold;
-    font-size: 28px;
-    line-height: 1;
-    display: block;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* 👇 Esto garantiza que el toque en cualquier parte del ícono cuente */
-    pointer-events: auto;
-}
         
     </style>
 </head>
@@ -224,12 +180,10 @@
             </main>
 
  
-          <!-- <button id="add-group-btn" class="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-4xl">
+         <button id="add-group-btn" class="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-4xl">
                     <i class="fas fa-plus"></i>
-                </button>   -->
-<button id="add-group-btn">
-    <span class="add-icon">+</span>
-</button>
+                </button>  
+
             
         </div>
 
@@ -2022,6 +1976,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
