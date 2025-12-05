@@ -131,8 +131,10 @@
         }
 
 .btnagregar {
-    position:relative;
-    bottom:50%;
+   position: fixed;
+    bottom: 20px;        /* Distancia desde la parte inferior */
+    left: 50%;           /* Centrado horizontal */
+    transform: translateX(-50%); /* Ajuste para centrar el botón exactamente */
 }
     </style>
 </head>
@@ -1959,6 +1961,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
