@@ -225,6 +225,10 @@ right: 42%;
             <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg flex justify-between items-center">
                 <button id="back-to-groups-from-report-btn" class="text-2xl"><i class="fas fa-arrow-left"></i></button>
                 <h1 id="html-report-header" class="text-xl font-bold">Reporte General</h1>
+              
+                <button id="toggle-report-lock-btn" class="text-2xl"><i class="fas fa-lock"></i></button>
+
+                
                 <button id="save-html-report-btn" class="text-2xl hidden"><i class="fas fa-save text-amber-400"></i></button>
             </header>
             <main class="p-4">
@@ -558,6 +562,7 @@ right: 42%;
 
             
             attendanceLocked: true, // ← estado inicial bloqueado
+            reportLocked: true,
 
 
 
@@ -642,7 +647,24 @@ right: 42%;
 
 
 
-
+        toggleReportLock(shouldLock) {
+    this.reportLocked = shouldLock;
+    const lockIcon = document.querySelector('#toggle-report-lock-btn i');
+    if (shouldLock) {
+        lockIcon.className = 'fas fa-lock';
+        // Opcional: deshabilitar visualmente las celdas
+        document.querySelectorAll('#html-report-table .status-cell').forEach(cell => {
+            cell.style.opacity = '0.7';
+            cell.style.pointerEvents = 'none';
+        });
+    } else {
+        lockIcon.className = 'fas fa-lock-open text-green-500';
+        document.querySelectorAll('#html-report-table .status-cell').forEach(cell => {
+            cell.style.opacity = '1';
+            cell.style.pointerEvents = 'auto';
+        });
+    }
+},
 
 
 
@@ -780,6 +802,25 @@ right: 42%;
             attachEventListeners() {
                 
 
+
+
+
+                
+                    if (this.reportLocked) {
+        // Abrir candado: pedir clave
+        document.getElementById('unlock-password').value = '';
+        this.openModal('unlock-modal');
+        // Guardar contexto: para saber que es el reporte, no la asistencia
+        this.unlockContext = 'report';
+    } else {
+        // Cerrar candado
+        this.toggleReportLock(true);
+    }
+
+
+
+
+                
 
 document.getElementById('recover-key-btn').addEventListener('click', () => {
     const question = this.data.config.securityQuestion;
@@ -948,9 +989,16 @@ document.getElementById('toggle-lock-btn').addEventListener('click', () => {
 document.getElementById('cancel-unlock-modal').addEventListener('click', () => {
     this.closeModal('unlock-modal');
 });
-                
+
+
+
+
+                /*
 document.getElementById('confirm-unlock-btn').addEventListener('click', () => {
     const password = document.getElementById('unlock-password').value;
+   
+    const expectedKey = this.data.config.lockKey || '1234';
+
     if (password === (this.data.config.lockKey || '1234')) { // ← puedes cambiar esto más adelante por this.data.config.lockKey
         this.toggleAttendanceLock(false);
         this.closeModal('unlock-modal');
@@ -959,6 +1007,42 @@ document.getElementById('confirm-unlock-btn').addEventListener('click', () => {
         document.getElementById('unlock-password').select();
     }
 });
+*/
+
+
+
+
+
+
+
+                
+document.getElementById('confirm-unlock-btn').addEventListener('click', () => {
+    const password = document.getElementById('unlock-password').value;
+    const expectedKey = this.data.config.lockKey || '1234';
+    if (password === expectedKey) {
+        this.closeModal('unlock-modal');
+        if (this.unlockContext === 'report') {
+            this.toggleReportLock(false);
+            this.unlockContext = null;
+        } else {
+            this.toggleAttendanceLock(false);
+        }
+    } else {
+        alert('Clave incorrecta.');
+        document.getElementById('unlock-password').select();
+    }
+});
+
+
+
+
+
+
+
+                
+
+
+                
 
 // Permitir "Enter" en el campo de contraseña
 document.getElementById('unlock-password').addEventListener('keypress', (e) => {
@@ -1250,6 +1334,15 @@ document.getElementById('unlock-password').addEventListener('keypress', (e) => {
                 table.innerHTML = thead + tbody;
             },
             handleReportCellClick(cell) {
+
+
+                    if (this.reportLocked) {
+        this.showToast('🔒 El reporte está bloqueado. Abre el candado para editar.');
+        return;
+    }
+
+
+                
                 const studentId = cell.dataset.studentId;
                 const date = cell.dataset.date;
                 const statuses = ['present', 'late', 'absent', 'justified'];
@@ -1282,11 +1375,51 @@ document.getElementById('unlock-password').addEventListener('keypress', (e) => {
                 
                 document.getElementById('save-html-report-btn').classList.remove('hidden');
             },
-            saveReportChanges() {
-                localStorage.setItem('attendanceApp', JSON.stringify(this.data));
-                this.showToast('Reporte actualizado correctamente');
-                document.getElementById('save-html-report-btn').classList.add('hidden');
-            },
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+         saveReportChanges() {
+    if (this.reportLocked) {
+        this.showToast('🔒 No se puede guardar: el reporte está bloqueado.');
+        return;
+    }
+    localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+    this.showToast('Reporte actualizado correctamente');
+    document.getElementById('save-html-report-btn').classList.add('hidden');
+},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
             showStatistics(groupId) {
                 this.currentGroupId = groupId;
                 this.renderStatistics();
@@ -1948,6 +2081,9 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
 
 
 
+
+
+
       
 
 
@@ -1969,6 +2105,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
