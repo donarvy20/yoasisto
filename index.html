@@ -100,25 +100,25 @@
 
 
 #add-group-btn {
-    position: fixed ;
-        z-index:1000 !important; /* ↑ Asegura que esté por encima de todo */
+    position: fixed;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background-color: #3B82F6; /* o el color que uses */
+    background-color: #3B82F6;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    -webkit-tap-highlight-color: transparent; /* evita el flash azul en iOS */
-    touch-action: manipulation; /* mejora la respuesta táctil */
+    z-index: 2147483647 !important; /* Máximo posible */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     cursor: pointer;
-    
+    pointer-events: auto; /* Asegura que reciba eventos táctiles */
 }
 
         
@@ -1977,6 +1977,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
