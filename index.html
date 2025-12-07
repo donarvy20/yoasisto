@@ -201,12 +201,17 @@ right: 40%;
             </header>
             <main class="p-4">
                 <div class="bg-white p-4 rounded-xl shadow-md mb-4">
-                    <div class="flex items-center justify-between">
-                        <input type="date" id="attendance-date" class="border-gray-300 rounded-lg p-2 text-lg">
-                        <div id="attendance-summary" class="text-sm space-x-3 flex items-center">
-                            <!-- Resumen se carga aquí -->
-                        </div>
-                    </div>
+             <div class="flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+        <input type="date" id="attendance-date" class="border-gray-300 rounded-lg p-2 text-lg">
+        <button id="delete-date-btn" title="Borrar asistencia de esta fecha" class="text-red-500 hover:text-red-700 text-xl">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+    <div id="attendance-summary" class="text-sm space-x-3 flex items-center">
+        <!-- Resumen se carga aquí -->
+    </div>
+</div>
                 </div>
                 <div class="flex gap-2 mb-4">
                     <button id="mark-all-present-btn" class="flex-1 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-green-600 transition">
@@ -648,7 +653,40 @@ saveData() {
 },
 
 
+deleteAttendanceDate() {
+    if (this.attendanceLocked) {
+        this.showToast('🔒 La asistencia está bloqueada. Desbloquéala para borrar fechas.');
+        return;
+    }
+    if (!confirm(`¿Estás seguro de que quieres eliminar TODA la asistencia del día ${this.currentDate}?`)) {
+        return;
+    }
+    if (this.data.attendance[this.currentGroupId]?.[this.currentDate]) {
+        delete this.data.attendance[this.currentGroupId][this.currentDate];
+        // Si la fecha era la única en ese grupo, eliminar la entrada del grupo si queda vacía
+        if (Object.keys(this.data.attendance[this.currentGroupId]).length === 0) {
+            delete this.data.attendance[this.currentGroupId];
+        }
+        localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+        this.loadTemporaryAttendance(); // Recarga la vista (limpia la UI)
+        this.showToast(`Asistencia del ${this.currentDate} eliminada`);
+    } else {
+        this.showToast('No hay asistencia registrada para esta fecha');
+    }
+},
 
+
+
+
+
+
+
+
+
+
+
+
+            
             
   toggleAttendanceLock(shouldLock = null) {
     if (shouldLock === null) {
@@ -660,7 +698,7 @@ saveData() {
 
     // Actualizar UI
     const lockIcon = document.querySelector('#toggle-lock-btn i');
-   const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn, #save-attendance-btn');
+ const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn, #delete-date-btn');
     const dateInput = document.getElementById('attendance-date');
 
     if (this.attendanceLocked) {
@@ -840,6 +878,11 @@ document.getElementById('save-html-report-btn').disabled = true;
                     <span title="Justificadas"><i class="fas fa-file-medical status-justified"></i> ${summary.justified}</span>
                 `;
             },
+
+
+
+
+        
             
             attachEventListeners() {
                 
@@ -855,11 +898,6 @@ document.getElementById('save-html-report-btn').disabled = true;
         this.toggleReportLock(true);
     }
 */
-
-
-
-                
-
 document.getElementById('recover-key-btn').addEventListener('click', () => {
     const question = this.data.config.securityQuestion;
     if (!question) {
@@ -920,6 +958,10 @@ document.getElementById('recover-key-btn').addEventListener('click', () => {
                     this.currentDate = e.target.value;
                     this.loadTemporaryAttendance();
                 });
+
+
+document.getElementById('delete-date-btn').addEventListener('click', () => this.deleteAttendanceDate());
+                
                 
                 document.getElementById('student-list').addEventListener('click', e => {
                     const statusBtn = e.target.closest('.status-btn');
@@ -2177,6 +2219,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
