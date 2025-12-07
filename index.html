@@ -606,6 +606,10 @@ right: 40%;
                     };
                 }
             },
+
+
+
+            /*
             saveData() {
                 // Copia los cambios temporales a la data principal antes de guardar
                 if (!this.data.attendance[this.currentGroupId]) {
@@ -617,19 +621,35 @@ right: 40%;
                 document.getElementById('save-attendance-btn').classList.remove('save-pending');
                 this.showToast('Asistencia guardada');
 
-
-
                  this.hasUnsavedChanges = false;
     document.getElementById('save-attendance-btn').classList.remove('save-pending');
     this.showToast('Asistencia guardada');
 
     // 🔒 Bloquear automáticamente después de guardar
     this.toggleAttendanceLock(true);
+     },  */
 
-                
-            },
+saveData() {
+    if (this.attendanceLocked) {
+        this.showToast('🔒 La asistencia está bloqueada. Desbloquéala para guardar.');
+        return;
+    }
+    // Copia los cambios temporales a la data principal antes de guardar
+    if (!this.data.attendance[this.currentGroupId]) {
+        this.data.attendance[this.currentGroupId] = {};
+    }
+    this.data.attendance[this.currentGroupId][this.currentDate] = JSON.parse(JSON.stringify(this.tempAttendanceForDate));
+    localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+    this.hasUnsavedChanges = false;
+    document.getElementById('save-attendance-btn').classList.remove('save-pending');
+    this.showToast('Asistencia guardada');
+    // 🔒 Bloquear automáticamente después de guardar
+    this.toggleAttendanceLock(true);
+},
 
 
+
+            
   toggleAttendanceLock(shouldLock = null) {
     if (shouldLock === null) {
         // Si no se especifica, alternar
@@ -640,7 +660,7 @@ right: 40%;
 
     // Actualizar UI
     const lockIcon = document.querySelector('#toggle-lock-btn i');
-    const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn');
+   const buttons = document.querySelectorAll('.status-btn, .comment-btn, .student-menu-btn, #mark-all-present-btn, #save-attendance-btn');
     const dateInput = document.getElementById('attendance-date');
 
     if (this.attendanceLocked) {
@@ -662,6 +682,10 @@ right: 40%;
     this.reportLocked = shouldLock;
     const lockIcon = document.querySelector('#toggle-report-lock-btn i');
     if (shouldLock) {
+
+document.getElementById('save-html-report-btn').disabled = true;
+
+        
         lockIcon.className = 'fas fa-lock';
         // Opcional: deshabilitar visualmente las celdas
         document.querySelectorAll('#html-report-table .status-cell').forEach(cell => {
@@ -670,6 +694,7 @@ right: 40%;
         });
     } else {
         lockIcon.className = 'fas fa-lock-open text-green-500';
+        document.getElementById('save-html-report-btn').disabled = false;
         document.querySelectorAll('#html-report-table .status-cell').forEach(cell => {
             cell.style.opacity = '1';
             cell.style.pointerEvents = 'auto';
@@ -1426,7 +1451,7 @@ document.getElementById('toggle-report-lock-btn').addEventListener('click', () =
 
 
 
-
+/*
             
          saveReportChanges() {
     if (this.reportLocked) {
@@ -1439,9 +1464,17 @@ document.getElementById('toggle-report-lock-btn').addEventListener('click', () =
 },
 
 
+*/
 
-
-
+saveReportChanges() {
+    if (this.reportLocked) {
+        this.showToast('🔒 El reporte está bloqueado. Abre el candado para guardar cambios.');
+        return;
+    }
+    localStorage.setItem('attendanceApp', JSON.stringify(this.data));
+    this.showToast('Reporte actualizado correctamente');
+    document.getElementById('save-html-report-btn').classList.add('hidden');
+},
 
 
 
@@ -2144,6 +2177,7 @@ this.data.config.securityAnswer = document.getElementById('security-answer').val
     
 </body>
 </html>
+
 
 
 
