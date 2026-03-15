@@ -1023,15 +1023,6 @@ document.getElementById('delete-date-btn').addEventListener('click', () => this.
                 document.getElementById('settings-btn').addEventListener('click', () => this.openSettingsModal());
                 document.getElementById('close-settings-modal').addEventListener('click', () => this.closeModal('settings-modal'));
 
-document.getElementById('close-settings-modal').addEventListener('touchend', (e) => {
-    e.preventDefault(); // Evita comportamientos no deseados
-    app.closeModal('settings-modal');
-});
-
-
-
-
-                
                 document.getElementById('save-settings-btn').addEventListener('click', () => this.saveSettings());
                 document.getElementById('manual-backup-btn').addEventListener('click', () => this.createBackup());
                 document.getElementById('restore-backup-input').addEventListener('change', (e) => this.restoreBackup(e));
@@ -1078,7 +1069,7 @@ document.getElementById('close-settings-modal').addEventListener('touchend', (e)
                 
                 // Info Modal
                 document.getElementById('info-btn').addEventListener('click', () => this.openModal('info-modal'));
-                document.getElementById('close-settings-modal').addEventListener('click', () => this.closeModal('info-modal'));
+                document.getElementById('close-info-modal').addEventListener('click', () => this.closeModal('info-modal'));
 
 
 
