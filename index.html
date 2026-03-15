@@ -1069,7 +1069,10 @@ document.getElementById('toggle-lock-btn').addEventListener('click', () => {
 document.getElementById('cancel-unlock-modal').addEventListener('click', () => {
     this.closeModal('unlock-modal');
 });
-
+document.getElementById('cancel-unlock-modal').addEventListener('touchend', (e) => {
+    e.preventDefault(); // Evita comportamientos no deseados
+    app.closeModal('settings-modal');
+});
 
 
 
